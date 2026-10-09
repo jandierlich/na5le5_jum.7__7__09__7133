@@ -10,7 +10,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <title>HorizontWahr</title>
-<meta name="description" content="HorizontWahr – Was ist das da hinten? Türme, Windräder, Kirchen, Orte und Berge im Kamerabild, mit Entfernung und Richtung.">
+<meta name="description" content="HorizontWahr – Was ist das da hinten? Türme, Kirchen, Mühlen, Orte und Berge im Kamerabild, mit Entfernung und Richtung.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="WahrZentrale">
@@ -170,7 +170,8 @@
   .hz-go{margin-left:4px;padding:6px 10px;font-size:12.5px}
   .hz-more{display:block;margin:10px auto 0}
   .hz-reset-row{display:flex;justify-content:flex-end;margin:-4px 0 12px}
-  .hz-reset-row .icon-btn{font-size:13.5px;font-weight:600;color:var(--sub-onbg)}</style>
+  .hz-reset-row .icon-btn{font-size:13.5px;font-weight:600;color:var(--sub-onbg)}
+  .hz-reset{margin:2px 0 12px}</style>
 <link rel="stylesheet" href="./wz-common.css">
 <link rel="stylesheet" href="./wz-unify.css">
 </head>
@@ -180,21 +181,22 @@
 <symbol id="wzi-home" viewBox="0 0 24 24"><path d="M4 11.5L12 4l8 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10.5V20h5v-5.5h2V20h5v-9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
 <symbol id="wzi-close" viewBox="0 0 24 24"><g stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></g></symbol>
 <symbol id="wzi-camera" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M4 8.2h3.2L8.6 6h6.8l1.4 2.2H20v10.6H4z"/><circle cx="12" cy="13" r="3.3"/></g></symbol>
-<symbol id="wzi-horizon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 16.5h19"/><path d="M5 20c4.5-1 9.5-1 14 0" opacity=".6"/><path d="M7 16.5v-4l2-1.6 2 1.6v4M8.2 10.6L9 6.5l.8 4.1"/><path d="M16.5 16.5V9.5"/><circle cx="16.5" cy="8.6" r=".8" fill="currentColor" stroke="none"/><path d="M16.5 7.7V4M15.8 9.1l-3 1.7M17.2 9.1l3 1.7"/></g></symbol>
+<symbol id="wzi-horizon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 16.5h19"/><path d="M5 20c4.5-1 9.5-1 14 0" opacity=".6"/><path d="M6.5 16.5v-4l2-1.6 2 1.6v4M7.7 10.6l.8-4.1.8 4.1"/><path d="M16.5 16.5V9.6M15.6 9.6h1.8l-.9-4.1z"/><path d="M16.5 5.5V3"/><circle cx="16.5" cy="7.6" r="3" opacity=".5"/></g></symbol>
 <symbol id="wzi-radar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" opacity=".6"/><path d="M12 12l6-6"/><circle cx="15.5" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="8" cy="9" r="1" fill="currentColor" stroke="none"/></g></symbol>
 <symbol id="wzi-list" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="17.5" r="1" fill="currentColor" stroke="none"/></g></symbol>
 <symbol id="wzi-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.7" r="1" fill="currentColor" stroke="none"/></g></symbol>
 <symbol id="wzi-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 018 0v3.5"/><circle cx="12" cy="15" r="1.3" fill="currentColor" stroke="none"/></g></symbol>
 <symbol id="wzi-crosshair" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r=".9" fill="currentColor" stroke="none"/></g></symbol>
-<symbol id="wzi-turbine" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V11"/><circle cx="12" cy="9.8" r="1.1"/><path d="M12 8.7V2.8M11 10.4l-5.2 3M13 10.4l5.2 3"/><path d="M9 21h6"/></g></symbol>
 <symbol id="wzi-tower" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21l1.6-11h2.8L15 21"/><path d="M10.2 13h3.6"/><rect x="9.6" y="6.5" width="4.8" height="3.5" rx=".8"/><path d="M12 6.5V2.5"/><path d="M7.5 21h9"/></g></symbol>
 <symbol id="wzi-church" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21v-7l6-4.5 6 4.5v7z"/><path d="M12 9.5V2.5M10 4.5h4"/><path d="M10.2 21v-3.6a1.8 1.8 0 0 1 3.6 0V21"/></g></symbol>
 <symbol id="wzi-peak" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 20l6.5-11 3.5 5.5 2.5-3.5 6.5 9z"/><path d="M7.1 11.3l1.9 1.6 1.7-1.3" opacity=".7"/></g></symbol>
 <symbol id="wzi-lighthouse" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21l1.4-11h3.2L15 21"/><path d="M9.8 10h4.4M10 6.5h4v3.5h-4z"/><path d="M12 6.5V4.5M6 21h12"/><path d="M5 7.5l3-1M19 7.5l-3-1" opacity=".7"/></g></symbol>
 <symbol id="wzi-castle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9h3v2h2.5V9h5v2H17V9h3v12z"/><path d="M10 21v-4a2 2 0 0 1 4 0v4"/><path d="M12 9V4l3 1.2-3 1.2" /></g></symbol>
 <symbol id="wzi-town" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21v-7l4-3 4 3v7M11 21V8.5l5-3.5 5 3.5V21"/><path d="M3 21h18"/><path d="M14.5 11h3M14.5 14.5h3" opacity=".7"/></g></symbol>
-<symbol id="wzi-chimney" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21l1.2-15h3.6L15 21"/><path d="M10 9.5h4M9.6 15h4.8" opacity=".7"/><path d="M13 4c1-1.5 3-1.2 3.5-2.5" opacity=".6"/><path d="M7 21h10"/></g></symbol>
-<symbol id="wzi-watertower" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 8.5a4.5 3 0 0 0 9 0V6.5h-9z"/><path d="M7.5 6.5l4.5-3 4.5 3"/><path d="M10 11.2L9 21M14 11.2l1 9.8M9.6 16h4.8"/></g></symbol>
+<symbol id="wzi-mill" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21l1.2-8.5h3.6L15 21"/><path d="M8.5 21h7"/><circle cx="12" cy="10" r="1"/><path d="M12 10L7 5M12 10l5-5M12 10l-5 5M12 10l5 5" /><path d="M7 5l-1.4 1.4M17 5l1.4 1.4" opacity=".7"/></g></symbol>
+<symbol id="wzi-viewpoint" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20.5h18"/><path d="M5 20.5l5-8 3 4 2-2.5 4 6.5"/><circle cx="16.5" cy="6.5" r="2.5"/><path d="M16.5 2.5v1M20.5 6.5h-1M13.5 4l.7.7" opacity=".7"/></g></symbol>
+<symbol id="wzi-landmark" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 3.9 4.3.6-3.1 3 .7 4.3-3.8-2-3.8 2 .7-4.3-3.1-3 4.3-.6z"/><path d="M6 21h12M8 21v-3h8v3"/></g></symbol>
+<symbol id="wzi-highrise" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V8l5-3v16M10 21V3.5l6 3V21M16 21v-9h3v9"/><path d="M3 21h18"/><path d="M7 11h1M7 14h1M12.5 8h1M12.5 11h1M12.5 14h1" opacity=".7"/></g></symbol>
 <symbol id="wzi-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></g></symbol>
 <symbol id="wzi-warning" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3.5L21.5 20h-19z"/><line x1="12" y1="9.2" x2="12" y2="14.2"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></g></symbol>
 <symbol id="wzi-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 8.5l-2.2 5.2-5.2 2.2 2.2-5.2z" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="var(--wzi-bg,#fff)"/></symbol>
@@ -208,7 +210,7 @@
   <header class="wz-hero">
     <div class="logo-badge"><img class="wz-logo-light" src="./hz-icon-192.png" alt="HorizontWahr Logo" width="84" height="84" decoding="sync" fetchpriority="high"></div>
     <h1>HorizontWahr</h1>
-    <p>Was ist das da hinten? Türme, Windräder, Kirchen, Orte und Berge – mit Entfernung und Richtung.</p>
+    <p>Was ist das da hinten? Türme, Kirchen, Mühlen, Orte und Berge – mit Entfernung und Richtung.</p>
   </header>
 
   <div class="tabs" role="tablist">
@@ -231,7 +233,7 @@
       </div>
       <h3>Was soll erscheinen?</h3>
       <div class="chip-row" id="hzCats" aria-label="Arten"></div>
-      <div class="hz-reset-row"><button type="button" class="icon-btn" id="hzReset"><svg class="wzi" aria-hidden="true"><use href="#wzi-refresh"></use></svg> Auswahl zurücksetzen</button></div>
+      <button type="button" class="cta slim hz-reset" id="hzReset"><svg class="wzi" aria-hidden="true"><use href="#wzi-close"></use></svg> Auswahl zurücksetzen</button>
       <button class="cta primary" id="hzLoad"><svg class="wzi" aria-hidden="true"><use href="#wzi-refresh"></use></svg> Umgebung laden</button>
       <p class="muted small" id="hzStatus" role="status" style="margin:10px 0 0"></p>
     </div>
@@ -480,19 +482,23 @@ function camStop(stream, video){
   function toast(t){ if(window.wzToast) wzToast(t); }
 
   var CATS = [
-    { id: "turm", name: "Türme & Masten", ic: "tower", col: "#B9A6F5" },
-    { id: "wind", name: "Windräder", ic: "turbine", col: "#E6DDF7" },
+    { id: "turm", name: "Türme", ic: "tower", col: "#B9A6F5" },
     { id: "kirche", name: "Kirchen", ic: "church", col: "#FFD27A" },
     { id: "ort", name: "Orte", ic: "town", col: "#8E75F0" },
     { id: "berg", name: "Berge & Hügel", ic: "peak", col: "#C3B2F0" },
     { id: "leucht", name: "Leuchttürme", ic: "lighthouse", col: "#FFE7A8" },
-    { id: "burg", name: "Burgen & Schlösser", ic: "castle", col: "#D8CCFA" }
+    { id: "burg", name: "Burgen & Schlösser", ic: "castle", col: "#D8CCFA" },
+    { id: "muehle", name: "Mühlen", ic: "mill", col: "#E6DDF7" },
+    { id: "aussicht", name: "Aussichtspunkte", ic: "viewpoint", col: "#FFE7A8" },
+    { id: "sehens", name: "Sehenswürdigkeiten", ic: "landmark", col: "#FFD27A" },
+    { id: "hoch", name: "Hochhäuser & Flughäfen", ic: "highrise", col: "#C3B2F0" }
   ];
   var CAT = {}; CATS.forEach(function(c){ CAT[c.id] = c; });
 
   var cfg = load(LS_CFG, {}) || {};
   if([5, 10, 20, 30].indexOf(cfg.r) === -1) cfg.r = 10;
-  if(!Array.isArray(cfg.cats)) cfg.cats = ["turm", "wind", "kirche", "ort", "berg", "leucht", "burg"];
+  if(!Array.isArray(cfg.cats)) cfg.cats = [];
+  cfg.cats = cfg.cats.filter(function(id, i, a){ return CAT[id] && a.indexOf(id) === i; });
   if(!cfg.cal) cfg.cal = { yaw: 0, fov: 68 };
   if(!(cfg.eye > 0)) cfg.eye = 1.6;
   function saveCfg(){ save(LS_CFG, cfg); }
@@ -522,9 +528,9 @@ function camStop(stream, video){
     saveCfg(); paintCats(); renderRadar(); if(current === "liste") renderList();
   });
   paintCats();
-  /* Auswahl auf den Anfangszustand zurücksetzen (Umkreis 10 km, alle Arten) */
+  /* Auswahl auf den Anfangszustand zurücksetzen (Umkreis 10 km, keine Art gewählt) */
   $("hzReset").addEventListener("click", function(){
-    cfg.r = 10; cfg.cats = CATS.map(function(c){ return c.id; }); saveCfg();
+    cfg.r = 10; cfg.cats = []; saveCfg();
     paintRadius(); paintCats(); renderRadar(); if(current === "liste") renderList();
     toast("Auswahl zurückgesetzt");
   });
@@ -539,7 +545,7 @@ function camStop(stream, video){
   function enrich(){
     if(!data) return [];
     var g0 = data.own != null ? data.own : 0, eyeAbs = g0 + eye();
-    return data.items.filter(function(it){ return cfg.cats.indexOf(it.c) !== -1; }).map(function(it){
+    return data.items.filter(function(it){ return CAT[it.c] && it.t !== "Sendemast" && cfg.cats.indexOf(it.c) !== -1; }).map(function(it){
       var d = Math.max(1, hav(data.lat, data.lon, it.la, it.lo)), az = bear(data.lat, data.lon, it.la, it.lo);
       var g = it.c === "berg" && it.x != null ? it.x : (it.e != null ? it.e : g0), h = it.h || 0, drop = d * d / (2 * REFF);
       return { it: it, d: d, az: az, altTop: Math.atan2(g + h - eyeAbs - drop, d) / D2R, altBase: Math.atan2(g - eyeAbs - drop, d) / D2R, hid: hiddenAt(d), g: g };
@@ -550,21 +556,27 @@ function camStop(stream, video){
   function q(r, la, lo){
     var a = "(around:" + r + "," + la.toFixed(5) + "," + lo.toFixed(5) + ")", parts = [];
     var C = {
-      turm: '(nwr["man_made"="tower"]["tower:type"!~"^(lighting|cooling|minaret)$"]' + a + ';nwr["man_made"="mast"]["tower:type"="communication"]' + a + ';nwr["man_made"="water_tower"]' + a + ';nwr["man_made"="chimney"]' + a + ';);out center 250;',
-      wind: 'nwr["power"="generator"]["generator:source"="wind"]' + a + ';out center 500;',
+      turm: '(nwr["man_made"="tower"]["tower:type"!~"^(lighting|cooling|minaret|observation)$"]' + a + ';nwr["man_made"="water_tower"]' + a + ';nwr["man_made"="chimney"]' + a + ';);out center 250;',
       kirche: '(nwr["building"="church"]' + a + ';nwr["building"="cathedral"]' + a + ';);out center 250;',
       ort: '(node["place"="city"]' + a + ';node["place"="town"]' + a + ';node["place"="village"]' + a + ';);out 300;',
       berg: '(node["natural"="peak"]' + a + ';node["natural"="hill"]' + a + ';);out 150;',
       leucht: 'nwr["man_made"="lighthouse"]' + a + ';out center 60;',
-      burg: 'nwr["historic"="castle"]' + a + ';out center 100;'
+      burg: 'nwr["historic"="castle"]' + a + ';out center 100;',
+      muehle: '(nwr["man_made"="windmill"]' + a + ';nwr["man_made"="watermill"]' + a + ';);out center 120;',
+      aussicht: '(nwr["man_made"="tower"]["tower:type"="observation"]' + a + ';node["tourism"="viewpoint"]' + a + ';);out center 120;',
+      sehens: '(nwr["tourism"="attraction"]' + a + ';nwr["historic"="monument"]' + a + ';);out center 150;',
+      hoch: '(nwr["height"~"^([4-9][0-9]|[1-9][0-9][0-9])([.,][0-9]+)?( ?m)?$"]["building"]' + a + ';nwr["aeroway"="aerodrome"]' + a + ';);out center 150;'
     };
     CATS.forEach(function(c){ if(cfg.cats.indexOf(c.id) !== -1) parts.push(C[c.id]); });
-    return "[out:json][timeout:40];" + parts.join("");
+    return "[out:json][timeout:25];" + parts.join("");
   }
   function hnum(v){ if(v == null) return null; var m = String(v).replace(",", ".").match(/[0-9]+(\.[0-9]+)?/); if(!m) return null; var n = parseFloat(m[0]); if(/ft|'/.test(String(v))) n *= 0.3048; return n > 0 && n < 900 ? n : null; }
   function classify(el){
     var t = el.tags || {}, mm = t.man_made, tt = t["tower:type"];
-    if(t.power === "generator") return { c: "wind", t: "Windrad", dh: 150 };
+    if(t.aeroway === "aerodrome") return { c: "hoch", t: /international|public/i.test(t["aerodrome:type"] || "") || t.iata ? "Flughafen" : "Flugplatz", dh: 0 };
+    if(mm === "windmill") return { c: "muehle", t: "Windmühle", dh: 20 };
+    if(mm === "watermill") return { c: "muehle", t: "Wassermühle", dh: 10 };
+    if(t.tourism === "viewpoint" && !mm) return { c: "aussicht", t: "Aussichtspunkt", dh: 0 };
     if(t.place) return { c: "ort", t: t.place === "city" ? "Stadt" : t.place === "town" ? "Kleinstadt" : "Dorf", dh: 0 };
     if(t.natural === "peak" || t.natural === "hill") return { c: "berg", t: t.natural === "peak" ? "Gipfel" : "Hügel", dh: 0 };
     if(mm === "lighthouse") return { c: "leucht", t: "Leuchtturm", dh: 30 };
@@ -572,14 +584,16 @@ function camStop(stream, video){
     if(t.building === "church" || t.building === "cathedral") return { c: "kirche", t: t.building === "cathedral" ? "Dom / Kathedrale" : "Kirche", dh: t.building === "cathedral" ? 70 : 40 };
     if(mm === "water_tower") return { c: "turm", t: "Wasserturm", dh: 35 };
     if(mm === "chimney") return { c: "turm", t: "Schornstein", dh: 60 };
-    if(mm === "mast") return { c: "turm", t: "Sendemast", dh: 60 };
     if(mm === "tower"){
       if(tt === "communication") return { c: "turm", t: "Funkturm", dh: 120 };
-      if(tt === "observation") return { c: "turm", t: "Aussichtsturm", dh: 30 };
+      if(tt === "observation") return { c: "aussicht", t: "Aussichtsturm", dh: 30 };
       if(tt === "bell_tower") return { c: "turm", t: "Glockenturm", dh: 35 };
       if(tt === "defensive" || tt === "watchtower") return { c: "turm", t: "Wehrturm", dh: 20 };
       return { c: "turm", t: "Turm", dh: 30 };
     }
+    if(t.historic === "monument") return { c: "sehens", t: "Denkmal", dh: 15 };
+    if(t.tourism === "attraction") return { c: "sehens", t: "Sehenswürdigkeit", dh: 15 };
+    if(t.building && hnum(t.height) >= 40) return { c: "hoch", t: "Hochhaus", dh: 40 };
     return null;
   }
   function parse(json, la, lo){
@@ -669,7 +683,7 @@ function camStop(stream, video){
   }
   $("hzLoad").addEventListener("click", function(){
     if(loading){ loadCtl.stop = true; try { if(loadCtl.ctrl) loadCtl.ctrl.abort(); } catch(e){} status("Wird abgebrochen …"); return; }
-    if(cfg.cats.length === 0){ status("Bitte mindestens eine Art auswählen."); return; }
+    if(cfg.cats.length === 0){ status("Bitte zuerst oben auswählen, was erscheinen soll."); return; }
     askOnce().then(function(ok){
       if(!ok) return;
       loadCtl = { stop: false, ctrl: null }; loadUi(true);
@@ -693,7 +707,10 @@ function camStop(stream, video){
         paintStatus(); renderRadar(); toast(r.items.length + " Objekte geladen");
       }).catch(function(e){
         if(e && e.cancel){ if(data) paintStatus(); status("Abgebrochen." + (data ? " Die zuletzt geladene Umgebung bleibt erhalten." : "")); return; }
-        status((e && e.name === "AbortError") ? "Zeitüberschreitung – bitte später noch einmal versuchen." : (e && e.message && /Standort/.test(e.message) ? e.message : "Laden nicht möglich (" + ((e && e.message) || "Fehler") + "). Bitte später noch einmal versuchen."));
+        var busy = e && (e.name === "AbortError" || e.name === "TypeError" || /load failed|failed to fetch|networkerror|HTTP (429|5\d\d)|Overpass|nicht erreichbar/i.test(e.message || ""));
+        status(e && e.message && /Standort/.test(e.message) ? e.message : busy
+          ? "Der Kartenserver ist gerade überlastet oder nicht erreichbar. Bitte in ein paar Minuten noch einmal versuchen – mit kleinerem Umkreis klappt es meist schneller."
+          : "Laden nicht möglich (" + ((e && e.message) || "Fehler") + "). Bitte später noch einmal versuchen.");
       }).then(function(){ loadUi(false); });
     });
   });
@@ -970,7 +987,7 @@ function camStop(stream, video){
   var onb = wzOnboarding({
     key: LS_ONB,
     slides: [
-      { icon: "horizon", title: "Willkommen bei HorizontWahr", text: "Was ist das da hinten? Halte die Kamera in die Landschaft – Türme, Windräder, Kirchen, Orte und Berge werden mit Namen und Entfernung beschriftet." },
+      { icon: "horizon", title: "Willkommen bei HorizontWahr", text: "Was ist das da hinten? Halte die Kamera in die Landschaft – Türme, Kirchen, Mühlen, Orte, Berge und Sehenswürdigkeiten werden mit Namen und Entfernung beschriftet." },
       { icon: "radar", title: "Einmal laden, überall schauen", text: "Die Umgebung wird einmal aus OpenStreetMap geladen und auf dem Gerät gemerkt. Danach geht der Rundblick auch offline." },
       { icon: "crosshair", title: "Forschen mit dem Fadenkreuz", text: "Im Fadenkreuz siehst du Entfernung, Höhe und wie viel die Erdkrümmung verdeckt. „Ausrichten“ gleicht den Kompass an einem bekannten Objekt an." },
       { icon: "lock", title: "Privat geht vor", text: "Dein Standort wird nur beim Laden gesendet – erst nach deiner Zustimmung. Das Kamerabild bleibt auf dem Gerät und wird nie gespeichert." }
