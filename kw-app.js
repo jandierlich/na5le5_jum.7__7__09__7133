@@ -668,9 +668,34 @@ function kwSetupAR(){
   // neu aufgebaut wurde (das kann den synthetischen "click" auf iOS kosten).
   layer.addEventListener("pointerup", (e) => {
     const cluster = e.target.closest(".kw-ar-mark-cluster");
-    if (cluster && cluster.dataset.jump) kwShowPage(cluster.dataset.jump);
+    if (cluster && cluster._items) { e.stopPropagation(); kwOpenARPop(cluster._items); }
+  });
+  // Antippen irgendwo anders im Kamerabild schließt die Übersicht wieder
+  const wrap = layer.parentElement;
+  if (wrap) wrap.addEventListener("pointerup", (e) => {
+    const pop = document.getElementById("kw-ar-pop");
+    if (!pop || pop.hidden) return;
+    if (e.target.closest("#kw-ar-pop") && !e.target.closest(".kw-ar-pop-close")) return;
+    if (e.target.closest(".kw-ar-mark-cluster")) return;
+    pop.hidden = true;
   });
   requestAnimationFrame(kwARFrame);
+}
+
+/* Übersicht einer Sammel-Marke direkt im Kamerabild: jedes Ziel mit Entfernung und Richtung.
+   Der Blick in die Kamera bleibt erhalten (früher wechselte die App auf die Listen-Seite). */
+function kwOpenARPop(items){
+  const pop = document.getElementById("kw-ar-pop");
+  if (!pop) return;
+  const rows = items.slice().sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0)).map(m => {
+    const name = m.name || m.label.split(" · ")[0];
+    const meta = (typeof m.dist === "number" ? kwFormatDist(m.dist) + " · " : "") + kwCompassLabel(m.az);
+    return `<li><span class="kw-ar-pop-ic">${m.icon}</span><span class="kw-ar-pop-name">${kwEsc(name)}</span><span class="kw-ar-pop-meta">${kwEsc(meta)}</span></li>`;
+  }).join("");
+  pop.innerHTML = `<div class="kw-ar-pop-head"><b>${items.length} Ziele in dieser Richtung</b>`
+    + `<button type="button" class="kw-ar-pop-close" aria-label="Schließen"><svg class="wzi" aria-hidden="true"><use href="#wzi-close"></use></svg></button></div>`
+    + `<ul>${rows}</ul>`;
+  pop.hidden = false;
 }
 
 /* Weiches Gleiten: Blickrichtung und Neigung werden zeitbasiert geglättet (ca. 60 ms, wie im
@@ -727,7 +752,13 @@ function kwUpdateAR(heading){
     const sun = kwSunPosition(now, kwState.lat, kwState.lon);
     if (sun.alt > -6) marks.push({ az: sun.az, alt: sun.alt, label: "Sonne", icon: wzIcon("sun"), kind: "kw-ar-sky" });
     const moon = kwMoonPosition(now, kwState.lat, kwState.lon);
-    if (moon.alt > -6) marks.push({ az: moon.az, alt: moon.alt, label: "Mond", icon: wzIcon("moon"), kind: "kw-ar-sky" });
+    if (moon.alt > -6) {
+      // Mondphase gleich mit anzeigen – kurz vor/nach Neumond steht der Mond dicht bei der Sonne
+      // und ist dann am Himmel praktisch nicht zu sehen.
+      const ph = kwMoonPhaseInfo(now);
+      const moonLabel = ph.illum < 0.03 ? "Mond · Neumond, kaum sichtbar" : `Mond · ${ph.name}`;
+      marks.push({ az: moon.az, alt: moon.alt, label: moonLabel, icon: wzIcon("moon"), kind: "kw-ar-sky" });
+    }
     KW_SKY_OBJECTS.forEach(obj => {
       const p = kwPlanetPosition(obj.key, now, kwState.lat, kwState.lon);
       if (p.alt > 0) marks.push({ az: p.az, alt: p.alt, label: obj.label, icon: obj.icon, kind: "kw-ar-sky" });
@@ -799,6 +830,9 @@ function kwUpdateAR(heading){
   projected.forEach(m => {
     const group = groups.find(g =>
       g.kind === m.kind &&
+      // Himmelsobjekte (Sonne, Mond, Planeten, Polarstern) werden nie zusammengefasst –
+      // es sind nur wenige, und jedes hat eine echte, eigene Position am Himmel.
+      m.kind !== "kw-ar-sky" &&
       Math.abs(g.leftPct - m.leftPct) < KW_CLUSTER_H_PCT &&
       Math.abs(g.topPct - m.topPct) < KW_CLUSTER_V_PCT
     );
@@ -806,17 +840,45 @@ function kwUpdateAR(heading){
     else groups.push({ kind: m.kind, leftPct: m.leftPct, topPct: m.topPct, items: [m] });
   });
 
+  // Erst ab 4 nahen Marken einer Art wird zusammengefasst. Bei 2–3 bleibt jede Marke an ihrer
+  // echten Position und ist einzeln lesbar – nur die Beschriftungen werden versetzt (s. u.).
+  const KW_CLUSTER_MIN = 4;
+  for (let i = groups.length - 1; i >= 0; i--) {
+    const g = groups[i];
+    if (g.items.length > 1 && g.items.length < KW_CLUSTER_MIN) {
+      groups.splice(i, 1, ...g.items.map(m => ({ kind: m.kind, leftPct: m.leftPct, topPct: m.topPct, items: [m] })));
+    }
+  }
+  // Liegen Marken dicht beieinander (z. B. Sonne und Mond um Neumond oder zwei nahe Orte), bleibt
+  // jede an ihrer echten Position; die Beschriftungen werden abwechselnd nach unten/oben versetzt,
+  // damit sie sich nicht überdecken.
+  const KW_LABEL_STEP_PX = 48;
+  const layerH = layer.clientHeight || 600, layerW = layer.clientWidth || 360;
+  const labelShift = new Map();
+  const placed = []; // { x, y } angezeigte Mittelpunkte in Pixeln
+  groups.forEach(g => {
+    const x = g.leftPct / 100 * layerW, y = g.topPct / 100 * layerH;
+    const free = dy => !placed.some(o => Math.abs(o.x - x) < KW_CLUSTER_H_PCT / 100 * layerW && Math.abs(o.y - (y + dy)) < KW_LABEL_STEP_PX);
+    // erste freie Stelle suchen: an Ort und Stelle, sonst abwechselnd darunter/darüber
+    let dy = 0;
+    for (let k = 1; !free(dy) && k <= 8; k++) dy = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * KW_LABEL_STEP_PX / 2;
+    if (dy) labelShift.set(g, dy);
+    placed.push({ x, y: y + dy });
+  });
+
   groups.forEach(g => {
     const anchor = g.items[0];
     const el = document.createElement("div");
     el.style.left = g.leftPct + "%";
     el.style.top = g.topPct + "%";
+    const shiftPx = labelShift.get(g) || 0;
+    if (shiftPx) el.style.transform = `translate(-50%, calc(-50% + ${shiftPx}px))`;
 
     if (g.items.length === 1) {
       el.className = "kw-ar-mark " + (g.kind || "");
       if (typeof anchor.dist === "number") {
         const t = Math.min(1, anchor.dist / maxDist);
-        el.style.transform = `translate(-50%, -50%) scale(${(1.1 - t*0.4).toFixed(2)})`;
+        el.style.transform = `translate(-50%, calc(-50% + ${shiftPx}px)) scale(${(1.1 - t*0.4).toFixed(2)})`;
         el.style.opacity = (1 - t*0.5).toFixed(2);
       }
       el.innerHTML = `<span class="kw-ar-dot">${anchor.icon}</span>${kwEsc(anchor.label)}`;
@@ -828,7 +890,10 @@ function kwUpdateAR(heading){
       const names = g.items.slice(0, 2).map(m => m.name || m.label.split(" · ")[0]).join(", ");
       const more = g.items.length > 2 ? ` +${g.items.length - 2}` : "";
       el.innerHTML = `<span class="kw-ar-dot">${anchor.icon}</span>${g.items.length} Ziele: ${kwEsc(names)}${kwEsc(more)}`;
-      el.dataset.jump = g.kind === "kw-ar-waypoint" ? "wegpunkte" : "orte";
+      // Ziele direkt am Element merken – beim Antippen öffnet sich die Übersicht im Kamerabild
+      el._items = g.items;
+      el.setAttribute("role", "button");
+      el.setAttribute("aria-label", `${g.items.length} Ziele anzeigen`);
     }
     layer.appendChild(el);
     kwState.arEls.push({ el, az: anchor.az, alt: anchor.alt });
