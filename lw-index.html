@@ -87,7 +87,7 @@
   .gauge-svg{position:absolute;top:0;left:0;width:100%;height:100%;display:block;overflow:visible}
   .gauge-tick{font-size: 12.5px;fill:var(--sub-onbg);font-family:inherit}
   .gauge-peak{fill:var(--text)}
-  .gauge-handle-dot{fill:var(--card);stroke-width:6px;transition:stroke .3s,cx .18s linear,cy .18s linear}
+  .gauge-handle-dot{fill:var(--card);stroke-width:4px;transition:stroke .3s,cx .18s linear,cy .18s linear}
   .gauge-handle-shadow{fill:rgba(0,0,0,.14);transition:cx .18s linear,cy .18s linear}
   html.theme-dark .gauge-handle-shadow{fill:rgba(0,0,0,.35)}
   .gauge-center{position:absolute;left:0;right:0;bottom:4%;text-align:center;pointer-events:none}
@@ -370,18 +370,18 @@
       <div class="gauge-wrap">
         <div class="gauge-aspect">
         <svg class="gauge-svg" viewBox="0 0 300 185" id="gaugeSvg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <path id="zoneGreen" fill="none" stroke="#34C759" stroke-width="32"/>
-          <path id="zoneYellow" fill="none" stroke="#FFCC02" stroke-width="32"/>
-          <path id="zoneRed" fill="none" stroke="#FF3B30" stroke-width="32"/>
-          <circle id="capStart" r="16" fill="#34C759"/>
-          <circle id="capEnd" r="16" fill="#FF3B30"/>
+          <path id="zoneGreen" fill="none" stroke="#34C759" stroke-width="14"/>
+          <path id="zoneYellow" fill="none" stroke="#FFCC02" stroke-width="14"/>
+          <path id="zoneRed" fill="none" stroke="#FF3B30" stroke-width="14"/>
+          <circle id="capStart" r="7" fill="#34C759"/>
+          <circle id="capEnd" r="7" fill="#FF3B30"/>
           <text id="tick0" class="gauge-tick" text-anchor="middle"></text>
           <text id="tick60" class="gauge-tick" text-anchor="middle"></text>
           <text id="tick85" class="gauge-tick" text-anchor="middle"></text>
           <text id="tick120" class="gauge-tick" text-anchor="middle"></text>
           <polygon id="peakMarker" class="gauge-peak" points="0,0 0,0 0,0" opacity="0"></polygon>
-          <circle id="handleShadow" class="gauge-handle-shadow" r="17"></circle>
-          <circle id="handleDot" class="gauge-handle-dot" r="16" stroke="#34C759"></circle>
+          <circle id="handleShadow" class="gauge-handle-shadow" r="11.5"></circle>
+          <circle id="handleDot" class="gauge-handle-dot" r="10.5" stroke="#34C759"></circle>
         </svg>
         <div class="gauge-center">
           <div class="db-number" id="dbNumber">–</div>
@@ -602,7 +602,7 @@
 
   // ---------- Gauge (Halbkreis-Anzeige mit Marker-Punkt, Vorschlag B) ----------
   var GAUGE_MAX = 120;
-  var GAUGE_CX = 150, GAUGE_CY = 160, GAUGE_R = 116, GAUGE_T = 32;
+  var GAUGE_CX = 150, GAUGE_CY = 160, GAUGE_R = 116, GAUGE_T = 14;
   var GAUGE_RMID = GAUGE_R - GAUGE_T/2;
   var GAUGE_HEX = {green:"#34C759", yellow:"#FFCC02", red:"#FF3B30"};
 
@@ -639,9 +639,9 @@
     shadow.setAttribute("cx", hp.x); shadow.setAttribute("cy", hp.y+2.5);
 
     if(peak > 0.5){
-      var tip = gaugePoint(GAUGE_R - 5, peak);
-      var o1 = gaugePoint(GAUGE_R + 15, Math.max(0, peak-2.2));
-      var o2 = gaugePoint(GAUGE_R + 15, Math.min(GAUGE_MAX, peak+2.2));
+      var tip = gaugePoint(GAUGE_R + 1, peak);
+      var o1 = gaugePoint(GAUGE_R + 13, Math.max(0, peak-2));
+      var o2 = gaugePoint(GAUGE_R + 13, Math.min(GAUGE_MAX, peak+2));
       var poly = document.getElementById("peakMarker");
       poly.setAttribute("points", tip.x+","+tip.y+" "+o1.x+","+o1.y+" "+o2.x+","+o2.y);
       poly.setAttribute("opacity", "1");
@@ -793,7 +793,11 @@
   }
 
   function drawGraph(){
-    var w=canvas.width, h=canvas.height;
+    // Zeichenfläche in echter Bildschirmauflösung, damit Schrift und Linien scharf bleiben
+    var dpr = Math.min(3, window.devicePixelRatio || 1), cw = canvas.clientWidth || 300, chh = canvas.clientHeight || 190;
+    if(canvas.width !== Math.round(cw*dpr) || canvas.height !== Math.round(chh*dpr)){ canvas.width = Math.round(cw*dpr); canvas.height = Math.round(chh*dpr); }
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    var w=cw, h=chh;
     ctx.clearRect(0,0,w,h);
     if(history60.length < 2) return;
     var now = history60[history60.length-1].t;
@@ -808,15 +812,16 @@
       {db:85, label:"85 dB"},
       {db:100, label:"100 dB · laut"}
     ];
-    ctx.font = "10px -apple-system, sans-serif";
+    var labelCol = getComputedStyle(canvas).getPropertyValue("--sub-onbg").trim() || "#5B5470";
+    ctx.font = "600 11.5px -apple-system, system-ui, sans-serif";
     ctx.textBaseline = "bottom";
     marks.forEach(function(mark){
       var y = yFor(mark.db);
-      ctx.strokeStyle = "rgba(128,128,128,0.25)";
+      ctx.strokeStyle = "rgba(128,128,128,0.32)";
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
-      ctx.fillStyle = "rgba(128,128,128,0.85)";
-      ctx.fillText(mark.label, 6, y - 2);
+      ctx.fillStyle = labelCol;
+      ctx.fillText(mark.label, 8, y - 3);
     });
 
     ctx.beginPath();
@@ -828,7 +833,7 @@
     var lastDb = history60[history60.length-1].db;
     var a = ampelFor(lastDb);
     ctx.strokeStyle = a.cls==="green" ? "#34C759" : a.cls==="yellow" ? "#FFCC02" : "#FF3B30";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.stroke();

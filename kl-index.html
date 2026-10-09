@@ -157,15 +157,18 @@
   .muted a{color:var(--accent);font-weight:600}
   /* KlangWahr */
   .kl-instr{position:relative}
-  .kl-water{display:block;width:100%;height:220px;background:#0B0921}
-  .kl-spec{display:block;width:100%;height:96px;border-top:1px solid rgba(226,220,255,.14)}
-  .kl-idle{position:absolute;left:0;right:0;top:0;height:316px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:rgba(226,220,255,.75);font-size:13.5px;pointer-events:none}
+  .kl-water{display:block;width:100%;height:320px;background:#0B0921}
+  .kl-spec{display:block;width:100%;height:110px;border-top:1px solid rgba(226,220,255,.14)}
+  .kl-idle{position:absolute;left:0;right:0;top:0;height:430px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:rgba(226,220,255,.75);font-size:13.5px;pointer-events:none}
   .kl-idle .wzi{width:34px;height:34px;color:#B9A6F5}
   .kl-tuner{padding-top:4px}
   #klTunerSvg{display:block;width:100%;height:auto}
   .kl-note{text-align:center;margin-top:2px;position:relative}
   .kl-note b{display:block;font:600 44px ui-rounded,-apple-system,sans-serif;color:#fff;line-height:1}
-  .kl-note b.ok{color:#FFD27A}
+  .kl-note b.ok{color:#34C759}
+  .kl-note b.near{color:#FFD27A}
+  .kl-note b.far{color:#FF3B30}
+  .kl-note b{transition:color .25s}
   .kl-note span{display:block;font:500 12px var(--mono);color:rgba(226,220,255,.75);margin-top:6px;min-height:15px}
   .kl-strings{display:flex;justify-content:center;gap:8px;padding:12px 10px 4px;flex-wrap:wrap}
   .kl-strings span{min-width:38px;padding:5px 8px;border-radius:9px;border:1px solid rgba(226,220,255,.22);font:600 13px var(--mono);color:rgba(226,220,255,.8);text-align:center}
@@ -252,7 +255,7 @@
     </div>
     <div class="card">
       <h2>So liest du das Klangbild</h2>
-      <p class="muted">Oben läuft das Klangbild von oben nach unten durch: Jede Zeile ist ein Augenblick, links sind tiefe, rechts hohe Töne. Je heller, desto lauter. Ein gleichmäßiger Ton zeichnet eine senkrechte Linie, eine Vogelstimme schnelle Bögen, Sprache viele waagerechte Streifen. Unten siehst du das aktuelle Spektrum.</p>
+      <p class="muted">Oben läuft das Klangbild von oben nach unten durch: Jede Zeile ist ein Augenblick, links sind tiefe, rechts hohe Töne. Je heller, desto lauter. Zu sehen sind etwa die letzten 8 Sekunden. Ein gleichmäßiger Ton zeichnet eine senkrechte Linie, eine Vogelstimme schnelle Bögen, Sprache viele waagerechte Streifen. Unten siehst du das aktuelle Spektrum.</p>
     </div>
   </section>
 
@@ -281,7 +284,7 @@
     </div>
     <div class="card">
       <h2>Tipps</h2>
-      <p class="muted">Halte das Instrument nah ans iPhone und zupfe oder streiche eine Saite einzeln. Liegt der Ton innerhalb von ±3 Cent, leuchtet die Anzeige golden. Ein Cent ist ein Hundertstel Halbton; Abweichungen unter ±5 Cent hört kaum jemand.</p>
+      <p class="muted">Halte das Instrument nah ans iPhone und zupfe oder streiche eine Saite einzeln. Die Skala reicht bis ±25 Cent. Bis ±5 Cent leuchtet die Anzeige grün (gestimmt), bis ±10 Cent golden (minimal daneben), darüber rot. Das kleine Feld unten in der Skala zeigt die Abweichung als Zahl. Ein Cent ist ein Hundertstel Halbton; Abweichungen unter ±5 Cent hört kaum jemand.</p>
     </div>
   </section>
 
@@ -427,7 +430,7 @@
     if(src){ try { src.disconnect(); } catch(e){} src = null; }
     if(mic){ mic.getTracks().forEach(function(t){ t.stop(); }); mic = null; }
     an = null; micLabel(false);
-    $("klNote").textContent = "–"; $("klNote").classList.remove("ok"); $("klNoteSub").textContent = "Spiel einen Ton";
+    hist = []; smC = null; tuneTarget = null; tunerUi(null); dispC = 0; dispA = 0; lastAnim = 0; animTuner();
   }
   function toggleMic(){ if(mic) micStop(); else micStart(); }
   $("klMicBtn").addEventListener("click", toggleMic);
@@ -438,7 +441,7 @@
   var RANGES = { voll: [20, 20000], tief: [20, 1000], stimme: [70, 4000], hoch: [2000, 20000] };
   var range = RANGES[cfg.range] ? cfg.range : "voll";
   function setRange(r){
-    range = r; cfg.range = r; saveCfg(); heldTop = null; lastUi = 0;
+    range = r; cfg.range = r; saveCfg(); heldTop = null; lastUi = 0; wfMax = null;
     Array.prototype.forEach.call($("klRange").children, function(c){ var on = c.getAttribute("data-r") === r; c.classList.toggle("active", on); c.setAttribute("aria-checked", on ? "true" : "false"); });
     var w = $("klWater"); if(w.width) w.getContext("2d").clearRect(0, 0, w.width, w.height);
   }
@@ -478,19 +481,31 @@
     }
     return res;
   }
-  var lastStats = null, lastUi = 0, heldTop = null;
+  var lastStats = null, lastUi = 0, heldTop = null, wfMax = null, wfAcc = 0, wfT = 0, WF_SEC = 8;
   function drawSpectrum(){
     var w = $("klWater"), s = $("klSpec"), W = w.width, H = w.height; if(!W) return;
-    var g = w.getContext("2d"), rowH = Math.max(1, Math.round(H / 220 * 1.5));
-    g.drawImage(w, 0, 0, W, H - rowH, 0, rowH, W, H - rowH);
-    var row = g.createImageData(W, 1), d = row.data, sr = ac.sampleRate, bw = sr / an.fftSize, n = fbuf.length;
+    /* Wasserfall: ganze Höhe in etwa 8 Sekunden; zwischen zwei Zeilen wird je Spalte der lauteste Wert gesammelt,
+       damit kurze Töne nicht verloren gehen */
+    var g = w.getContext("2d"), sr = ac.sampleRate, bw = sr / an.fftSize, n = fbuf.length, now0 = performance.now();
+    if(!wfMax || wfMax.length !== W){ wfMax = new Float32Array(W); wfMax.fill(-200); wfAcc = 0; wfT = now0; }
     for(var x = 0; x < W; x++){
       var fa = frOfX(x, W), fb = frOfX(x + 1, W), ia = Math.max(1, Math.floor(fa / bw)), ib = Math.min(n - 1, Math.max(ia, Math.floor(fb / bw))), m = -200;
       for(var i = ia; i <= ib; i++) if(fbuf[i] > m) m = fbuf[i];
-      var t = Math.max(0, Math.min(1, (m - DBMIN) / (DBMAX - DBMIN))), c = LUT[Math.round(t * 255)];
-      d[x * 4] = c[0]; d[x * 4 + 1] = c[1]; d[x * 4 + 2] = c[2]; d[x * 4 + 3] = 255;
+      if(m > wfMax[x]) wfMax[x] = m;
     }
-    for(var r = 0; r < rowH; r++) g.putImageData(row, 0, r);
+    wfAcc += Math.min(200, now0 - wfT) / 1000 * H / WF_SEC; wfT = now0;
+    var rowH = Math.floor(wfAcc);
+    if(rowH >= 1){
+      wfAcc -= rowH;
+      g.drawImage(w, 0, 0, W, H - rowH, 0, rowH, W, H - rowH);
+      var row = g.createImageData(W, 1), d = row.data;
+      for(x = 0; x < W; x++){
+        var t = Math.max(0, Math.min(1, (wfMax[x] - DBMIN) / (DBMAX - DBMIN))), c = LUT[Math.round(t * 255)];
+        d[x * 4] = c[0]; d[x * 4 + 1] = c[1]; d[x * 4 + 2] = c[2]; d[x * 4 + 3] = 255;
+      }
+      for(var r = 0; r < rowH; r++) g.putImageData(row, 0, r);
+      wfMax.fill(-200);
+    }
     /* Spektrum-Kurve */
     var sg = s.getContext("2d"), SW = s.width, SH = s.height, dpr = SW / s.clientWidth;
     sg.clearRect(0, 0, SW, SH);
@@ -513,7 +528,7 @@
     var sum = 0; for(var q = 0; q < tbuf.length; q++) sum += tbuf[q] * tbuf[q];
     var lvl = 10 * Math.log10(sum / tbuf.length + 1e-12);
     var num = 0, den = 0; for(var j = Math.ceil(50 / bw); j < n; j++){ var mg = Math.pow(10, fbuf[j] / 20); num += mg * j * bw; den += mg; }
-    var cen = den > 0 ? num / den : null;
+    var cen = den > 0 && lvl > -70 && pk.length ? num / den : null;
     lastStats = { peaks: pk, level: lvl, centroid: cen };
     var top = pk[0];
     /* kurzer Ton: den letzten deutlichen Wert noch eine Sekunde zeigen */
@@ -569,45 +584,85 @@
     var a = d[tau - 1], b = d[tau], c = tau + 1 <= tMax ? d[tau + 1] : b, den = a - 2 * b + c, p = den ? 0.5 * (a - c) / den : 0;
     return { f: sr / (tau + p), q: 1 - b };
   }
-  var hist = [], smC = null, lastTune = 0;
+  /* Anzeige: ±25 Cent, grün bis ±5, golden bis ±10, darüber rot. Die Nadel folgt dem Messwert weich gedämpft. */
+  var T_RANGE = 25, T_DEG = 80 / T_RANGE, T_GOLD = "#FFD27A", T_GREEN = "#34C759", T_RED = "#FF3B30";
+  function zoneOf(c){ var a = Math.abs(c); return a <= 5 ? "ok" : a <= 10 ? "near" : "far"; }
+  function zoneCol(z){ return z === "ok" ? T_GREEN : z === "near" ? T_GOLD : T_RED; }
+  var hist = [], smC = null, lastTune = 0, lastHit = 0, dispC = 0, dispA = 0, lastAnim = 0;
   function tune(){
-    var now = performance.now(); if(now - lastTune < 60) return; lastTune = now;
+    var now = performance.now(); if(now - lastTune < 50) return; lastTune = now;
     an.getFloatTimeDomainData(tbuf);
     var r = yin(tbuf, ac.sampleRate);
-    if(!r){ hist = []; smC = null; tunerSvg(null); $("klNoteSub").textContent = "Spiel einen Ton"; return; }
+    if(!r){
+      /* kurze Lücken überbrücken, damit die Nadel nicht springt */
+      if(smC != null && now - lastHit > 700){ hist = []; smC = null; tunerUi(null); }
+      return;
+    }
+    lastHit = now;
     hist.push(r.f); if(hist.length > 5) hist.shift();
     var fr = hist.slice().sort(function(a, b){ return a - b; })[Math.floor(hist.length / 2)];
     var m = midiOf(fr), target;
     if(inst.notes.length){ target = inst.notes.reduce(function(best, n){ return Math.abs(n - m) < Math.abs(best - m) ? n : best; }, inst.notes[0]); }
     else target = Math.round(m);
     var cents = (m - target) * 100;
-    smC = smC == null ? cents : smC + (cents - smC) * 0.35;
-    var ok = Math.abs(smC) <= 3;
-    $("klNote").textContent = noteName(target); $("klNote").classList.toggle("ok", ok);
-    $("klNoteSub").textContent = Math.abs(smC) > 50 ? (smC > 0 ? "viel zu hoch" : "viel zu tief") : ok ? "gestimmt" : (smC > 0 ? "etwas zu hoch – Saite lockern" : "etwas zu tief – Saite spannen");
-    $("klTF").textContent = f(fr, 1); $("klTC").textContent = (smC >= 0 ? "+" : "−") + f(Math.abs(smC), 0); $("klTT").textContent = f(freqOf(target), 1);
-    $("klTTs").textContent = "Hz · " + noteName(target);
-    tunerSvg(Math.max(-50, Math.min(50, smC)), ok);
-    renderStrings(inst.notes.length ? target : null);
+    if(smC == null || target !== tuneTarget || Math.abs(cents - smC) > 35) smC = cents;
+    else smC += (cents - smC) * 0.3;
+    tuneTarget = target;
+    tunerUi({ c: smC, fr: fr, target: target });
   }
-  function tunerSvg(c, ok){
+  var tuneTarget = null;
+  function tunerUi(v){
+    if(!v){
+      $("klNote").textContent = "–"; $("klNote").classList.remove("ok", "near", "far");
+      $("klNoteSub").textContent = "Spiel einen Ton";
+      $("klTF").textContent = "–"; $("klTC").textContent = "–"; $("klTT").textContent = "–"; $("klTTs").textContent = "Hz";
+      renderStrings(null); return;
+    }
+    var c = v.c, z = zoneOf(c), hi = c > 0;
+    $("klNote").textContent = noteName(v.target);
+    $("klNote").classList.toggle("ok", z === "ok"); $("klNote").classList.toggle("near", z === "near"); $("klNote").classList.toggle("far", z === "far");
+    $("klNoteSub").textContent = Math.abs(c) > T_RANGE ? (hi ? "viel zu hoch" : "viel zu tief") : z === "ok" ? "gestimmt" : z === "near" ? (hi ? "minimal zu hoch" : "minimal zu tief") : (hi ? "zu hoch" : "zu tief");
+    $("klTF").textContent = f(v.fr, 1); $("klTC").textContent = (c >= 0 ? "+" : "−") + f(Math.abs(c), 0); $("klTT").textContent = f(freqOf(v.target), 1);
+    $("klTTs").textContent = "Hz · " + noteName(v.target);
+    renderStrings(inst.notes.length ? v.target : null);
+  }
+  /* Nadel und Digitalfeld: jedes Bild weich nachführen */
+  function animTuner(){
+    var now = performance.now(), dt = Math.min(100, now - (lastAnim || now)); lastAnim = now;
+    var on = smC != null, goal = on ? Math.max(-T_RANGE - 0.5, Math.min(T_RANGE + 0.5, smC)) : 0;
+    var k = 1 - Math.exp(-dt / 140);
+    dispC += (goal - dispC) * k; dispA += ((on ? 1 : 0) - dispA) * (1 - Math.exp(-dt / 180));
+    var col = on ? zoneCol(zoneOf(smC)) : "#fff";
+    var nd = $("klNeedle"); if(!nd) return;
+    nd.setAttribute("transform", "rotate(" + (dispC * T_DEG).toFixed(2) + " 150 150)");
+    nd.setAttribute("stroke", col); nd.setAttribute("opacity", (0.25 + 0.75 * dispA).toFixed(2));
+    var dg = $("klDig"), bx = $("klDigBox");
+    if(on){ var r = Math.round(smC); dg.textContent = (r > 0 ? "+" : r < 0 ? "−" : "±") + Math.abs(r) + " ct"; }
+    else dg.textContent = "– – ct";
+    dg.setAttribute("fill", on ? col : "rgba(226,220,255,.55)");
+    bx.setAttribute("stroke", on ? col : "rgba(226,220,255,.3)");
+  }
+  function tunerSvg(){
     var cx = 150, cy = 150, R = 118, D2R = Math.PI / 180, GR = "rgba(226,220,255,", s = "";
-    s += '<path d="M' + (cx - R) + ' ' + cy + 'A' + R + ' ' + R + ' 0 0 1 ' + (cx + R) + ' ' + cy + '" fill="none" stroke="' + GR + '.18)" stroke-width="1"/>';
-    for(var k = -50; k <= 50; k += 5){
-      var a = (-90 + k * 1.6) * D2R, big = k % 25 === 0, r1 = R - (big ? 14 : 7);
-      s += '<path d="M' + (cx + Math.cos(a) * R).toFixed(1) + ' ' + (cy + Math.sin(a) * R).toFixed(1) + 'L' + (cx + Math.cos(a) * r1).toFixed(1) + ' ' + (cy + Math.sin(a) * r1).toFixed(1) + '" stroke="' + (k === 0 ? "#FFD27A" : GR + (big ? ".7)" : ".35)")) + '" stroke-width="' + (k === 0 ? 2 : 1) + '"/>';
-      if(big && k !== 0) s += '<text x="' + (cx + Math.cos(a) * (R + 12)).toFixed(1) + '" y="' + (cy + Math.sin(a) * (R + 12) + 4).toFixed(1) + '" fill="' + GR + '.7)" font-size="10" text-anchor="middle" font-family="ui-monospace,Menlo,sans-serif">' + (k > 0 ? "+" : "−") + Math.abs(k) + '</text>';
+    function pt(c, r){ var a = (-90 + c * T_DEG) * D2R; return (cx + Math.cos(a) * r).toFixed(1) + " " + (cy + Math.sin(a) * r).toFixed(1); }
+    function arc(c0, c1, r, col, w){ return '<path d="M' + pt(c0, r) + 'A' + r + ' ' + r + ' 0 0 1 ' + pt(c1, r) + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="butt"/>'; }
+    s += arc(-T_RANGE, T_RANGE, R, GR + '.18)', 1);
+    /* Farbzonen */
+    s += arc(-T_RANGE, -10, R - 20, "rgba(255,59,48,.45)", 4) + arc(10, T_RANGE, R - 20, "rgba(255,59,48,.45)", 4);
+    s += arc(-10, -5, R - 20, "rgba(255,210,122,.7)", 4) + arc(5, 10, R - 20, "rgba(255,210,122,.7)", 4);
+    s += arc(-5, 5, R - 20, "rgba(52,199,89,.6)", 4);
+    for(var k = -T_RANGE; k <= T_RANGE; k++){
+      var big = k === 0 || Math.abs(k) === 10 || Math.abs(k) === T_RANGE, mid = !big && k % 5 === 0, r1 = R - (big ? 14 : mid ? 10 : 5);
+      s += '<path d="M' + pt(k, R) + 'L' + pt(k, r1) + '" stroke="' + (k === 0 ? T_GREEN : GR + (big ? ".75)" : mid ? ".5)" : ".25)")) + '" stroke-width="' + (k === 0 ? 2 : 1) + '"/>';
+      if(k !== 0 && (big || mid)){ var p = pt(k, R + 13).split(" "); s += '<text x="' + p[0] + '" y="' + (+p[1] + 4).toFixed(1) + '" fill="' + GR + (big ? '.75)' : '.55)') + '" font-size="' + (big ? 10 : 9) + '" text-anchor="middle" font-family="ui-monospace,Menlo,sans-serif">' + (k > 0 ? "+" : "−") + Math.abs(k) + '</text>'; }
     }
-    var z = (-90 - 3 * 1.6) * D2R, z2 = (-90 + 3 * 1.6) * D2R;
-    s += '<path d="M' + (cx + Math.cos(z) * (R - 20)).toFixed(1) + ' ' + (cy + Math.sin(z) * (R - 20)).toFixed(1) + 'A' + (R - 20) + ' ' + (R - 20) + ' 0 0 1 ' + (cx + Math.cos(z2) * (R - 20)).toFixed(1) + ' ' + (cy + Math.sin(z2) * (R - 20)).toFixed(1) + '" fill="none" stroke="rgba(255,210,122,.55)" stroke-width="4" stroke-linecap="round"/>';
-    if(c != null){
-      var na = (-90 + c * 1.6) * D2R;
-      s += '<path d="M' + cx + ' ' + cy + 'L' + (cx + Math.cos(na) * (R - 4)).toFixed(1) + ' ' + (cy + Math.sin(na) * (R - 4)).toFixed(1) + '" stroke="' + (ok ? "#FFD27A" : "#fff") + '" stroke-width="2" stroke-linecap="round"/>';
-    }
-    s += '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + (ok ? "#FFD27A" : "#fff") + '"/>';
+    s += '<path id="klNeedle" d="M' + cx + ' ' + (cy - 12) + 'L' + cx + ' ' + (cy - R + 4) + '" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".25"/>';
+    /* kleines Digitalfeld am Drehpunkt */
+    s += '<rect id="klDigBox" x="' + (cx - 38) + '" y="' + (cy - 15) + '" width="76" height="24" rx="7" fill="#0B0921" stroke="rgba(226,220,255,.3)" stroke-width="1"/>';
+    s += '<text id="klDig" x="' + cx + '" y="' + (cy + 2) + '" text-anchor="middle" font-size="13" font-weight="600" font-family="ui-monospace,Menlo,sans-serif" fill="rgba(226,220,255,.55)">– – ct</text>';
     $("klTunerSvg").innerHTML = s;
   }
-  tunerSvg(null);
+  tunerSvg(); animTuner();
 
   function tick(){
     if(!an) return;
@@ -615,7 +670,7 @@
     if(frozen) return;
     an.getFloatFrequencyData(fbuf);
     if(current === "spektrum") drawSpectrum();
-    else if(current === "stimmen") tune();
+    else if(current === "stimmen"){ tune(); animTuner(); }
   }
 
   /* ---------- Momente ---------- */

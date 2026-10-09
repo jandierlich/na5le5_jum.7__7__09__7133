@@ -321,6 +321,15 @@ input[type="date"] {
   border: 2px solid var(--amber);
 }
 .ocr-field.confirmed { border-color: var(--teal); }
+/* Eingabe im Vorschlagsfeld ohne eigenen inneren Rahmen; der Fokus zeigt sich am äußeren Feld */
+.ocr-field input { box-shadow: none; border-radius: 0; outline: none; }
+.ocr-field input:not([type="date"]) { -webkit-appearance: none; appearance: none; }
+.ocr-field input:focus, .ocr-field input:focus-visible { outline: none; box-shadow: none; }
+.ocr-field:focus-within { box-shadow: inset 2px 2px 6px var(--shadow-dark-soft), inset -2px -2px 6px var(--shadow-light-soft), 0 0 0 3px rgba(139,108,240,.22); }
+/* Gleiches gilt für Felder, die in einem eigenen Kasten sitzen (Datum, Suche) */
+input[style*="border:none"], .search-bar input { box-shadow: none; border-radius: 0; }
+input[style*="border:none"]:focus, input[style*="border:none"]:focus-visible, .search-bar input:focus, .search-bar input:focus-visible { outline: none; }
+.search-bar:focus-within { box-shadow: inset 2px 2px 6px var(--shadow-dark-soft), inset -2px -2px 6px var(--shadow-light-soft), 0 0 0 3px rgba(139,108,240,.22); }
 .ocr-field .value { font-family: ui-rounded, -apple-system, sans-serif; font-weight: 700; font-size: 14px; }
 .ocr-hint { font-size: 10px; color: var(--amber); margin: 2px 0 14px; font-family: -apple-system, sans-serif; }
 
