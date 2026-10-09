@@ -770,7 +770,7 @@ function camStop(stream, video){
     if(!data){ err("Bitte zuerst „Umgebung laden“."); showTab("rundblick"); return; }
     ORI.permit().then(function(){
       ORI.start();
-      AR.on = true; AR.list = enrich(); AR.target = targetIdx != null ? data.items[targetIdx] : null; AR.calOpen = false; AR.lastInfo = "";
+      AR.on = true; AR.list = enrich(); AR.slots = {}; AR.list.forEach(function(o){ o.key = 'i' + data.items.indexOf(o.it); }); AR.target = targetIdx != null ? data.items[targetIdx] : null; AR.calOpen = false; AR.lastInfo = "";
       $("hzAr").classList.add("on");
       $("hzArTitle").textContent = "Rundblick\n" + data.items.length + " Objekte · " + data.r + " km";
       camStart($("hzVideo")).then(function(s){ AR.stream = s; }).catch(function(){ $("hzArInfo").textContent = "Kamera nicht verfügbar – die Beschriftung erscheint auf dunklem Hintergrund."; });
@@ -841,31 +841,56 @@ function camStop(stream, video){
       }
       ctx.globalAlpha = 1;
     });
-    /* Beschriftung: nah vor fern, ohne Überlappung */
-    var labels = [], placed = [];
+    /* Ruhige Beschriftung: Jedes Schild steht senkrecht über seinem Objekt (Linie immer senkrecht).
+       Überlappen sich Schilder, werden sie nur übereinander gestapelt – nie seitlich verschoben.
+       Ein Schild behält seine Stapelhöhe, solange sie frei bleibt, und gleitet sanft an neue Plätze.
+       Findet ein Objekt keinen freien Platz, bleibt nur seine Raute; die Daten zeigt das Fadenkreuz. */
+    var labels = [], placed = [], ROW = 28, now = performance.now();
+    if(!AR.slots) AR.slots = {};
     clusters(vis).forEach(function(g){
       var o = g[0], n = g.length;
-      labels.push({ o: o, t1: n > 1 ? "WINDPARK · " + n : (o.it.n ? o.it.n.toUpperCase() : "WINDRAD"), t2: km(o.d) + (n > 1 ? " · " + n + " Windräder" : "") });
+      labels.push({ o: o, key: "w" + o.key, t1: n > 1 ? "WINDPARK · " + n : (o.it.n ? o.it.n.toUpperCase() : "WINDRAD"), t2: km(o.d) + (n > 1 ? " · " + n + " Windräder" : "") });
     });
-    vis.forEach(function(o){ if(o.it.c !== "wind") labels.push({ o: o, t1: (o.it.n || o.it.t).toUpperCase(), t2: (o.it.n ? o.it.t + " · " : "") + km(o.d) }); });
+    vis.forEach(function(o){ if(o.it.c !== "wind") labels.push({ o: o, key: o.key, t1: (o.it.n || o.it.t).toUpperCase(), t2: (o.it.n ? o.it.t + " · " : "") + km(o.d) }); });
     labels.sort(function(a, b){ var ta = AR.target && a.o.it === AR.target ? -1 : 0, tb = AR.target && b.o.it === AR.target ? -1 : 0; return ta - tb || a.o.d - b.o.d; });
-    var maxLabels = 26, count = 0;
+    var maxLabels = 26, count = 0, seen = {};
     ctx.font = "600 11px " + MONO;
     labels.forEach(function(l){
       if(count >= maxLabels) return;
       var o = l.o, t1 = l.t1.length > 26 ? l.t1.slice(0, 25) + "…" : l.t1, w = Math.max(ctx.measureText(t1).width, ctx.measureText(l.t2).width * 0.95) + 8;
-      var x = Math.max(4 + w / 2, Math.min(W - 4 - w / 2, o.pt.x)), y = o.pt.y - 22, ok = false;
-      for(var k = 0; k < 7 && !ok; k++){
-        ok = y > 96 && placed.every(function(r){ return x + w / 2 < r.x0 || x - w / 2 > r.x1 || y + 4 < r.y0 || y - 26 > r.y1; });
-        if(!ok) y -= 28;
+      var sx = o.pt.x, align = "center", x0;
+      /* am Bildrand: Schild neben die Linie statt darüber, die Linie bleibt senkrecht */
+      if(sx - w / 2 < 4){ align = "left"; x0 = sx - 6; }
+      else if(sx + w / 2 > W - 4){ align = "right"; x0 = sx - w + 6; }
+      else x0 = sx - w / 2;
+      if(x0 < 2 || x0 + w > W - 2) return;
+      var base = o.pt.y - 22;
+      function free(row){
+        var y = base - row * ROW;
+        return y > 96 && placed.every(function(r){ return x0 + w < r.x0 || x0 > r.x1 || y + 4 < r.y0 || y - 26 > r.y1; });
       }
-      if(!ok) return;
-      placed.push({ x0: x - w / 2, x1: x + w / 2, y0: y - 26, y1: y + 4 }); count++;
+      var st = AR.slots[l.key], row = -1;
+      /* bisherige Höhe behalten, solange frei; tiefer rutschen erst nach kurzer Ruhe */
+      if(st && free(st.row)){
+        row = st.row;
+        if(row > 0 && now - st.t > 600){ for(var k0 = 0; k0 < row; k0++) if(free(k0)){ row = k0; break; } }
+      } else { for(var k = 0; k < 7; k++) if(free(k)){ row = k; break; } }
+      if(row < 0){ delete AR.slots[l.key]; return; }
+      if(!st || st.row !== row) AR.slots[l.key] = { row: row, t: now, y: st ? st.y : base - row * ROW };
+      st = AR.slots[l.key]; seen[l.key] = 1;
+      var ty = base - row * ROW;
+      /* sanft gleiten (zeitbasiert, gleich bei 60 und 120 Hz) */
+      var dt = Math.min(100, now - (st.last || now)); st.last = now;
+      st.y = Math.abs(st.y - ty) > ROW * 4 ? ty : st.y + (ty - st.y) * (1 - Math.exp(-dt / 90));
+      var y = st.y;
+      placed.push({ x0: x0, x1: x0 + w, y0: ty - 26, y1: ty + 4 }); count++;
       var tgt = AR.target && o.it === AR.target, col = tgt ? GOLD : "#fff";
-      ctx.strokeStyle = tgt ? GOLD : GRID + "0.55)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(o.pt.x, o.pt.y - 5); ctx.lineTo(x, y + 4); ctx.stroke();
-      mono(t1, x, y - 12, 11, col, "center", 700);
-      mono(l.t2, x, y + 1, 10, tgt ? GOLD : GRID + "0.85)", "center", 500);
+      ctx.strokeStyle = tgt ? GOLD : GRID + "0.55)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx, o.pt.y - 5); ctx.lineTo(sx, y + 4); ctx.stroke();
+      var tx = align === "center" ? sx : align === "left" ? x0 + 4 : x0 + w - 4;
+      mono(t1, tx, y - 12, 11, col, align, 700);
+      mono(l.t2, tx, y + 1, 10, tgt ? GOLD : "#E6DDF7", align, 500);
     });
+    Object.keys(AR.slots).forEach(function(k){ if(!seen[k] && now - AR.slots[k].t > 1500) delete AR.slots[k]; });
     /* Ziel außerhalb des Bildes: Pfeil am Rand */
     if(AR.target){
       var to = AR.list.filter(function(o){ return o.it === AR.target; })[0];
