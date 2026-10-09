@@ -244,7 +244,7 @@
       <div class="chip-row" id="hzCats" aria-label="Arten"></div>
       <button type="button" class="cta slim hz-reset" id="hzReset"><svg class="wzi" aria-hidden="true"><use href="#wzi-close"></use></svg> Auswahl zurücksetzen</button>
       <button class="cta primary" id="hzLoad"><svg class="wzi" aria-hidden="true"><use href="#wzi-refresh"></use></svg> Umgebung laden</button>
-      <p class="muted small" id="hzStatus" role="status" style="margin:10px 0 0"></p>
+      <p class="muted small" id="hzStatus" role="status" style="margin:10px 0 0;white-space:pre-line"></p>
     </div>
 
     <div class="card">
@@ -541,6 +541,7 @@ function camStop(stream, video){
     var id = b.getAttribute("data-c"), i = cfg.cats.indexOf(id);
     if(i === -1) cfg.cats.push(id); else cfg.cats.splice(i, 1);
     saveCfg(); paintCats(); renderRadar(); if(current === "liste") renderList();
+    if(!loading && typeof paintStatus === "function") paintStatus();
   });
   paintCats();
   /* Auswahl auf den Anfangszustand zurücksetzen (Umkreis 10 km, keine Art gewählt) */
@@ -570,23 +571,28 @@ function camStop(stream, video){
   }
 
   /* ---------- Laden: Overpass + Geländehöhen ---------- */
-  function q(r, la, lo){
-    var a = "(around:" + r + "," + la.toFixed(5) + "," + lo.toFixed(5) + ")", parts = [];
+  /* Je Art eine eigene, schlanke Abfrage: Fällt eine aus, bleiben die anderen erhalten.
+     Kein Ausgabe-Limit beim Server (das lieferte eine zufällige Auswahl) – gekappt wird erst
+     auf dem Gerät, und zwar nach Entfernung (die nächsten Objekte bleiben immer drin). */
+  var KEEP = { turm: 200, kirche: 200, ort: 300, berg: 150, leucht: 60, burg: 100, muehle: 120, aussicht: 120, sehens: 150, hoch: 150 };
+  function qCat(id, r, la, lo){
+    var a = "(around:" + r + "," + la.toFixed(5) + "," + lo.toFixed(5) + ")";
     var C = {
-      turm: '(nwr["man_made"="tower"]["tower:type"!~"^(lighting|cooling|minaret|observation)$"]' + a + ';nwr["man_made"="water_tower"]' + a + ';nwr["man_made"="chimney"]' + a + ';);out center 250;',
-      kirche: '(nwr["building"="church"]' + a + ';nwr["building"="cathedral"]' + a + ';);out center 250;',
-      ort: '(node["place"="city"]' + a + ';node["place"="town"]' + a + ';node["place"="village"]' + a + ';);out 300;',
-      berg: '(node["natural"="peak"]' + a + ';node["natural"="hill"]' + a + ';);out 150;',
-      leucht: 'nwr["man_made"="lighthouse"]' + a + ';out center 60;',
-      burg: 'nwr["historic"="castle"]' + a + ';out center 100;',
-      muehle: '(nwr["man_made"="windmill"]' + a + ';nwr["man_made"="watermill"]' + a + ';);out center 120;',
-      aussicht: '(nwr["man_made"="tower"]["tower:type"="observation"]' + a + ';node["tourism"="viewpoint"]' + a + ';);out center 120;',
-      sehens: '(nwr["tourism"="attraction"]' + a + ';nwr["historic"="monument"]' + a + ';);out center 150;',
-      hoch: '(nwr["height"~"^([4-9][0-9]|[1-9][0-9][0-9])([.,][0-9]+)?( ?m)?$"]["building"]' + a + ';nwr["aeroway"="aerodrome"]' + a + ';);out center 150;'
+      turm: 'nwr["man_made"="tower"]["tower:type"!~"^(lighting|cooling|minaret|observation)$"]' + a + ';nwr["man_made"="water_tower"]' + a + ';nwr["man_made"="chimney"]' + a + ';',
+      kirche: 'nwr["building"="church"]' + a + ';nwr["building"="cathedral"]' + a + ';nwr["building"="chapel"]' + a + ';nwr["amenity"="place_of_worship"]["religion"="christian"]' + a + ';',
+      ort: 'node["place"="city"]' + a + ';node["place"="town"]' + a + ';node["place"="village"]' + a + ';node["place"="suburb"]' + a + ';',
+      berg: 'node["natural"="peak"]' + a + ';node["natural"="hill"]' + a + ';',
+      leucht: 'nwr["man_made"="lighthouse"]' + a + ';',
+      burg: 'nwr["historic"="castle"]' + a + ';nwr["building"="castle"]' + a + ';nwr["historic"="manor"]' + a + ';',
+      muehle: 'nwr["man_made"="windmill"]' + a + ';nwr["man_made"="watermill"]' + a + ';',
+      aussicht: 'nwr["man_made"="tower"]["tower:type"="observation"]' + a + ';nwr["tourism"="viewpoint"]' + a + ';',
+      sehens: 'nwr["tourism"="attraction"]' + a + ';nwr["historic"="monument"]' + a + ';',
+      hoch: 'wr["building"]["height"~"^([4-9][0-9]|[1-9][0-9][0-9])([.,][0-9]+)?( ?m)?$"]' + a + ';wr["building"]["building:levels"~"^(1[4-9]|[2-9][0-9])$"]' + a + ';nwr["building"="skyscraper"]' + a + ';nwr["aeroway"="aerodrome"]' + a + ';'
     };
-    CATS.forEach(function(c){ if(cfg.cats.indexOf(c.id) !== -1) parts.push(C[c.id]); });
-    return "[out:json][timeout:25];" + parts.join("");
+    return "[out:json][timeout:" + qTimeout(id) + "];(" + C[id] + ");out center 2000;";
   }
+  /* Hochhaus-Suche ist für den Server am aufwendigsten – sie bekommt mehr Zeit */
+  function qTimeout(id){ return id === "hoch" ? 55 : 30; }
   function hnum(v){ if(v == null) return null; var m = String(v).replace(",", ".").match(/[0-9]+(\.[0-9]+)?/); if(!m) return null; var n = parseFloat(m[0]); if(/ft|'/.test(String(v))) n *= 0.3048; return n > 0 && n < 900 ? n : null; }
   function classify(el){
     var t = el.tags || {}, mm = t.man_made, tt = t["tower:type"];
@@ -594,11 +600,14 @@ function camStop(stream, video){
     if(mm === "windmill") return { c: "muehle", t: "Windmühle", dh: 20 };
     if(mm === "watermill") return { c: "muehle", t: "Wassermühle", dh: 10 };
     if(t.tourism === "viewpoint" && !mm) return { c: "aussicht", t: "Aussichtspunkt", dh: 0 };
-    if(t.place) return { c: "ort", t: t.place === "city" ? "Stadt" : t.place === "town" ? "Kleinstadt" : "Dorf", dh: 0 };
+    if(t.place) return { c: "ort", t: t.place === "city" ? "Stadt" : t.place === "town" ? "Kleinstadt" : t.place === "suburb" ? "Stadtteil" : "Dorf", dh: 0 };
     if(t.natural === "peak" || t.natural === "hill") return { c: "berg", t: t.natural === "peak" ? "Gipfel" : "Hügel", dh: 0 };
     if(mm === "lighthouse") return { c: "leucht", t: "Leuchtturm", dh: 30 };
-    if(t.historic === "castle") return { c: "burg", t: /manor|palace|stately|schloss/i.test(t.castle_type || "") ? "Schloss" : "Burg", dh: 25 };
+    if(t.historic === "castle" || t.building === "castle") return { c: "burg", t: /manor|palace|stately|schloss/i.test(t.castle_type || "") ? "Schloss" : "Burg", dh: 25 };
+    if(t.historic === "manor") return { c: "burg", t: "Herrenhaus", dh: 15 };
     if(t.building === "church" || t.building === "cathedral") return { c: "kirche", t: t.building === "cathedral" ? "Dom / Kathedrale" : "Kirche", dh: t.building === "cathedral" ? 70 : 40 };
+    if(t.building === "chapel") return { c: "kirche", t: "Kapelle", dh: 15 };
+    if(t.amenity === "place_of_worship" && t.religion === "christian") return { c: "kirche", t: "Kirche", dh: 30 };
     if(mm === "water_tower") return { c: "turm", t: "Wasserturm", dh: 35 };
     if(mm === "chimney") return { c: "turm", t: "Schornstein", dh: 60 };
     if(mm === "tower"){
@@ -610,14 +619,17 @@ function camStop(stream, video){
     }
     if(t.historic === "monument") return { c: "sehens", t: "Denkmal", dh: 15 };
     if(t.tourism === "attraction") return { c: "sehens", t: "Sehenswürdigkeit", dh: 15 };
-    if(t.building && hnum(t.height) >= 40) return { c: "hoch", t: "Hochhaus", dh: 40 };
+    var lv = num(t["building:levels"]);
+    if(t.building && (hnum(t.height) >= 40 || lv >= 14 || t.building === "skyscraper")) return { c: "hoch", t: "Hochhaus", dh: lv >= 14 ? Math.round(lv * 3.2) : 40 };
     return null;
   }
-  function parse(json, la, lo){
+  function parse(json, la, lo, only){
     var out = [], seen = {};
     (json.elements || []).forEach(function(el){
       var p = el.lat != null ? el : el.center; if(!p || p.lat == null) return;
       var k = classify(el); if(!k) return;
+      /* Objekte, die eigentlich zu einer anderen Art gehören, kommen dort über deren eigene Abfrage */
+      if(only && k.c !== only) return;
       var t = el.tags || {}, h = hnum(t.height), known = h != null;
       if(k.c === "wind" && h == null){ var hub = hnum(t["height:hub"]), rot = hnum(t["rotor:diameter"]); if(hub){ h = hub + (rot ? rot / 2 : 0); known = true; } }
       if(k.c === "ort" || k.c === "berg"){ h = 0; known = true; }
@@ -631,24 +643,25 @@ function camStop(stream, video){
     });
     out.forEach(function(it){ it.d = hav(la, lo, it.la, it.lo); });
     out.sort(function(a, b){ return a.d - b.d; });
+    if(only && KEEP[only]) out = out.slice(0, KEEP[only]);
     out.forEach(function(it){ delete it.d; });
     return out;
   }
   var MIRRORS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
-  function overpass(query, status){
-    var deadline = Date.now() + 50000, m = 0, attempt = 0;
+  function overpass(query, status, tmo){
+    var per = ((tmo || 30) + 10) * 1000, deadline = Date.now() + per * 2, m = 0, attempt = 0;
     function tryNext(lastErr){
       if(loadCtl.stop){ var c = new Error("abgebrochen"); c.cancel = true; return Promise.reject(c); }
       if(m >= MIRRORS.length || Date.now() > deadline - 3000) return Promise.reject(lastErr || new Error("Kein Overpass-Server erreichbar"));
       if(m > 0 || attempt > 0) status("Server antwortet langsam – versuche es weiter …");
-      var ctrl = new AbortController(), timer = setTimeout(function(){ ctrl.abort(); }, Math.min(30000, deadline - Date.now()));
-      loadCtl.ctrl = ctrl;
+      var ctrl = new AbortController(), timer = setTimeout(function(){ ctrl.abort(); }, Math.min(per, deadline - Date.now()));
+      (loadCtl.all = loadCtl.all || []).push(ctrl);
       return fetch(MIRRORS[m], { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" }, body: "data=" + encodeURIComponent(query), signal: ctrl.signal })
         .then(function(r){ if(!r.ok){ var e = new Error("HTTP " + r.status); e.skip = r.status === 429 || r.status >= 500; throw e; } return r.json(); })
         .then(function(j){
           clearTimeout(timer);
           if(!j || !Array.isArray(j.elements)) throw new Error("Unerwartete Antwort");
-          if(j.remark && /error|timed out|out of memory/i.test(j.remark)){ var e = new Error("Overpass: " + j.remark); e.skip = true; throw e; }
+          if(j.remark && /error|timed out|out of memory/i.test(j.remark)){ var e = new Error("Overpass: " + j.remark); e.skip = true; e.heavy = /timed out|out of memory/i.test(j.remark); throw e; }
           return j;
         }).catch(function(e){
           clearTimeout(timer);
@@ -663,6 +676,7 @@ function camStop(stream, video){
   function elevations(points){
     var out = new Array(points.length), chunks = [];
     for(var i = 0; i < points.length; i += 100) chunks.push(i);
+    /* (bis zu 1000 Punkte = 10 kleine Anfragen) */
     return chunks.reduce(function(p, start){
       return p.then(function(){
         if(loadCtl.stop){ var c = new Error("abgebrochen"); c.cancel = true; throw c; }
@@ -698,34 +712,72 @@ function camStop(stream, video){
     $("hzLoad").innerHTML = on ? wzIcon("close") + " Laden abbrechen" : LOAD_HTML;
     $("hzLoad").classList.toggle("primary", !on);
   }
+  /* Lädt die gewählten Arten einzeln (höchstens zwei Anfragen gleichzeitig, das erlaubt der Server pro Gerät).
+     Ergebnis je Art in cs: Anzahl (0 = gibt es im Umkreis laut OpenStreetMap nicht), -1 = Server überlastet,
+     -2 = Abfrage für den Server zu umfangreich. Schlägt eine Art fehl, werden – falls vorhanden – ihre Objekte
+     aus der letzten Ladung am selben Ort übernommen (-3 = ältere Daten übernommen). */
+  function loadCats(ids, rKm, p){
+    var cs = {}, got = {}, done = 0, idx = 0, firstErr = null;
+    function name(id){ return CAT[id] ? CAT[id].name : id; }
+    function one(){
+      if(idx >= ids.length) return Promise.resolve();
+      var id = ids[idx++];
+      status("Suche " + name(id) + " im Umkreis von " + rKm + " km … (" + (done + 1) + " von " + ids.length + ")");
+      return overpass(qCat(id, rKm * 1000, p.lat, p.lon), function(){ status("Server antwortet langsam (" + name(id) + ") – versuche es weiter …"); }, qTimeout(id))
+        .then(function(j){ got[id] = parse(j, p.lat, p.lon, id); cs[id] = got[id].length; },
+              function(e){ if(e && e.cancel) throw e; if(!firstErr) firstErr = e; cs[id] = e && e.heavy ? -2 : -1; })
+        .then(function(){ done++; return one(); });
+    }
+    return Promise.all([one(), one()]).then(function(){
+      if(loadCtl.stop){ var c = new Error("abgebrochen"); c.cancel = true; throw c; }
+      var old = data, near = old && old.items && hav(old.lat, old.lon, p.lat, p.lon) < 1000;
+      ids.forEach(function(id){
+        if(cs[id] >= 0 || !near) return;
+        var prev = old.items.filter(function(it){ return it.c === id && hav(p.lat, p.lon, it.la, it.lo) <= rKm * 1000; });
+        var okBefore = old.cs ? old.cs[id] >= 0 || old.cs[id] === -3 : prev.length > 0;
+        if(okBefore && prev.length){ got[id] = prev; cs[id] = -3; }
+      });
+      var items = [];
+      ids.forEach(function(id){ if(got[id]) items = items.concat(got[id]); });
+      if(!ids.some(function(id){ return got[id]; })) throw firstErr || new Error("Kein Overpass-Server erreichbar");
+      items.forEach(function(it){ it.d = hav(p.lat, p.lon, it.la, it.lo); });
+      items.sort(function(a, b){ return a.d - b.d; });
+      items.forEach(function(it){ delete it.d; });
+      return { items: items, cs: cs };
+    });
+  }
   $("hzLoad").addEventListener("click", function(){
-    if(loading){ loadCtl.stop = true; try { if(loadCtl.ctrl) loadCtl.ctrl.abort(); } catch(e){} status("Wird abgebrochen …"); return; }
+    if(loading){ loadCtl.stop = true; (loadCtl.all || []).forEach(function(c){ try { c.abort(); } catch(e){} }); status("Wird abgebrochen …"); return; }
     if(cfg.cats.length === 0){ status("Bitte zuerst oben auswählen, was erscheinen soll."); return; }
     askOnce().then(function(ok){
       if(!ok) return;
-      loadCtl = { stop: false, ctrl: null }; loadUi(true);
+      loadCtl = { stop: false, all: [] }; loadUi(true);
       status("Standort wird bestimmt …");
       var pos;
       getPosition().then(function(p){
         pos = p;
-        status("Suche markante Punkte im Umkreis von " + cfg.r + " km … (kann bis zu 45 Sek. dauern)");
-        return overpass(q(cfg.r * 1000, p.lat, p.lon), status);
-      }).then(function(j){
-        var items = parse(j, pos.lat, pos.lon);
+        return loadCats(cfg.cats.slice(), cfg.r, p);
+      }).then(function(res){
+        var items = res.items;
         status(items.length + " Objekte gefunden – Geländehöhen werden ergänzt …");
-        var pts = [[pos.lat, pos.lon]].concat(items.slice(0, 599).map(function(it){ return [it.la, it.lo]; }));
+        var n = Math.min(items.length, 999);
+        var pts = [[pos.lat, pos.lon]].concat(items.slice(0, n).map(function(it){ return [it.la, it.lo]; }));
         return elevations(pts).then(function(el){
-          return { own: el[0] != null ? el[0] : null, items: items.map(function(it, k){ if(k < 599 && el[k + 1] != null) it.e = el[k + 1]; return it; }), dem: el[0] != null };
-        }).catch(function(){ return { own: null, items: items, dem: false }; });
+          return { own: el[0] != null ? el[0] : null, items: items.map(function(it, k){ if(k < n && el[k + 1] != null) it.e = el[k + 1]; return it; }), dem: el[0] != null, cs: res.cs };
+        }).catch(function(){ return { own: null, items: items, dem: false, cs: res.cs }; });
       }).then(function(r){
         if(loadCtl.stop){ var c = new Error("abgebrochen"); c.cancel = true; throw c; }
-        data = { v: 1, lat: +pos.lat.toFixed(5), lon: +pos.lon.toFixed(5), name: pos.name || "", manual: !!pos.manual, r: cfg.r, ts: Date.now(), own: r.own, dem: r.dem, items: r.items };
+        data = { v: 1, lat: +pos.lat.toFixed(5), lon: +pos.lon.toFixed(5), name: pos.name || "", manual: !!pos.manual, r: cfg.r, ts: Date.now(), own: r.own, dem: r.dem, items: r.items, cs: r.cs };
         if(!save(LS_DATA, data)){ data.items = data.items.slice(0, 400); save(LS_DATA, data); }
-        paintStatus(); renderRadar(); toast(r.items.length + " Objekte geladen");
+        paintStatus(); renderRadar(); if(current === "liste") renderList();
+        var bad = Object.keys(r.cs).filter(function(id){ return r.cs[id] < 0; });
+        toast(r.items.length + " Objekte geladen" + (bad.length ? " – " + bad.length + (bad.length === 1 ? " Art" : " Arten") + " nicht erreichbar" : ""));
       }).catch(function(e){
         if(e && e.cancel){ if(data) paintStatus(); status("Abgebrochen." + (data ? " Die zuletzt geladene Umgebung bleibt erhalten." : "")); return; }
         var busy = e && (e.name === "AbortError" || e.name === "TypeError" || /load failed|failed to fetch|networkerror|HTTP (429|5\d\d)|Overpass|nicht erreichbar/i.test(e.message || ""));
-        status(e && e.message && /Standort/.test(e.message) ? e.message : busy
+        status(e && e.message && /Standort/.test(e.message) ? e.message : e && e.heavy
+          ? "Die Abfrage war für den Kartenserver zu umfangreich. Bitte einen kleineren Umkreis oder weniger Arten wählen."
+          : busy
           ? "Der Kartenserver ist gerade überlastet oder nicht erreichbar. Bitte in ein paar Minuten noch einmal versuchen – mit kleinerem Umkreis klappt es meist schneller."
           : "Laden nicht möglich (" + ((e && e.message) || "Fehler") + "). Bitte später noch einmal versuchen.");
       }).then(function(){ loadUi(false); });
@@ -734,7 +786,22 @@ function camStop(stream, video){
   function paintStatus(){
     if(!data){ status("Noch keine Umgebung geladen."); return; }
     var dt = new Date(data.ts);
-    status(data.items.length + " Objekte im Umkreis von " + data.r + " km · geladen " + dt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + ", " + dt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + (data.manual ? " · fester Ort" + (data.name ? " „" + data.name + "“" : "") : "") + (data.dem ? " · mit Geländehöhen" : ""));
+    var t = data.items.length + " Objekte im Umkreis von " + data.r + " km · geladen " + dt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + ", " + dt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + (data.manual ? " · fester Ort" + (data.name ? " „" + data.name + "“" : "") : "") + (data.dem ? " · mit Geländehöhen" : "");
+    var cs = data.cs;
+    if(cs){
+      var nm = function(id){ return CAT[id] ? CAT[id].name : id; }, sel = cfg.cats;
+      var none = sel.filter(function(id){ return cs[id] === 0; }).map(nm);
+      var busy = sel.filter(function(id){ return cs[id] === -1; }).map(nm);
+      var heavy = sel.filter(function(id){ return cs[id] === -2; }).map(nm);
+      var older = sel.filter(function(id){ return cs[id] === -3; }).map(nm);
+      var notYet = sel.filter(function(id){ return !(id in cs); }).map(nm);
+      if(none.length) t += "\nKeine Treffer im Umkreis (in OpenStreetMap nicht eingetragen): " + none.join(", ");
+      if(busy.length) t += "\nNicht geladen, Server überlastet: " + busy.join(", ") + " – bitte später erneut laden";
+      if(heavy.length) t += "\nFür den Server zu umfangreich: " + heavy.join(", ") + " – mit kleinerem Umkreis erneut laden";
+      if(older.length) t += "\nServer überlastet, ältere Daten behalten: " + older.join(", ");
+      if(notYet.length) t += "\nNoch nicht geladen: " + notYet.join(", ") + " – tippe auf „Umgebung laden“";
+    }
+    status(t);
   }
   paintStatus();
   $("hzClear").addEventListener("click", function(){

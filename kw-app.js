@@ -1212,30 +1212,34 @@ async function kwSearchPOIs(){
   // die nächstgelegenen fehlen. Sortiert und gekürzt wird danach hier auf dem Gerät.
   // "out tags center" liefert nur Namen/Kennzeichen und den Mittelpunkt (keine Umriss-Punkte) –
   // das hält die Antwort klein und schnell, auch im Mobilfunknetz.
-  const perType = radius <= 1000 ? 40 : 60;
-  const query = `[out:json][timeout:25];`
-    + queryTypes.map(t => "(" + t.sel.map(([k, v]) =>
-        `nwr["${k}"="${v}"]${t.extra || ""}(around:${radius},${lat},${lon});`).join("") + `);out tags center ${perType};`
-      ).join("");
+  // Jede Kategorie wird EINZELN abgefragt (höchstens zwei Anfragen gleichzeitig – mehr erlaubt
+  // overpass-api.de pro Gerät nicht). Früher ging alles in einer einzigen Anfrage raus: Wurde
+  // die bei großem Umkreis zu schwer, fiel ALLES aus und es hieß "Server überlastet", obwohl
+  // nur eine Kategorie das Problem war. Jetzt bleiben die übrigen Ergebnisse erhalten.
+  // Kein knappes Ausgabe-Limit beim Server mehr: Overpass sortiert nicht nach Entfernung, ein
+  // Limit von 40/60 lieferte bei dichten Kategorien eine zufällige Auswahl, und die
+  // nächstgelegenen Treffer konnten fehlen. Sortiert und gekürzt wird hier auf dem Gerät.
+  // "out tags center" liefert nur Namen/Kennzeichen und den Mittelpunkt – klein und schnell.
+  const qFor = t => `[out:json][timeout:25];(` + t.sel.map(([k, v]) =>
+      `nwr["${k}"="${v}"]${t.extra || ""}(around:${radius},${lat},${lon});`).join("") + `);out tags center 800;`;
   // Nur Server mit weltweiten Daten. overpass.osm.ch wurde entfernt: der enthält nur die
   // Schweiz und hat für Deutschland blitzschnell "0 Treffer" geliefert – das wurde als
   // gültiges Ergebnis übernommen, und die Suche fand scheinbar nichts.
   const mirrors = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
-  // Gesamtbudget passend zur Anzeige ("bis zu 45 Sek"); pro Anfrage etwas mehr Zeit als
-  // das Server-Timeout (20 s), damit langsame, aber gültige Antworten nicht abgebrochen werden.
-  const deadline = Date.now() + 45000;
-  const perRequestMs = 22000;
-
-  try {
-    let data = null, lastErr = null;
-    outer:
+  // Pro Anfrage MEHR Zeit als das Server-Timeout (25 s): Früher brach die App schon nach 22 s
+  // ab – schwere, aber gültige Antworten kamen dadurch nie an und wurden als "überlastet" gemeldet.
+  const perRequestMs = 33000;
+  const fetchType = async t => {
+    const deadline = Date.now() + 70000;
+    const query = qFor(t);
+    let lastErr = null;
     for (let m = 0; m < mirrors.length; m++) {
       // Pro Server bis zu 2 Versuche; bei "zu viele Anfragen" (429) oder Serverfehler direkt weiter.
-      for (let attempt = 0; attempt < 2 && !data; attempt++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         const remaining = deadline - Date.now();
-        if (remaining < 3000) break outer;
-        if (searchId !== kwPoiSearchId) return; // neuere Suche läuft bereits
-        if (m > 0 || attempt > 0) statusEl.textContent = "Server antwortet langsam – versuche es weiter …";
+        if (remaining < 3000) throw lastErr || new Error("Zeit abgelaufen");
+        if (searchId !== kwPoiSearchId) throw Object.assign(new Error("veraltet"), { stale: true });
+        if (m > 0 || attempt > 0) statusEl.textContent = `Server antwortet langsam (${t.label}) – versuche es weiter …`;
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), Math.min(perRequestMs, remaining));
         try {
@@ -1257,9 +1261,10 @@ async function kwSearchPOIs(){
           if (j.remark && /error|timed out|out of memory/i.test(j.remark)) {
             const err = new Error("Overpass: " + j.remark);
             err.skipMirror = true;
+            err.heavy = /timed out|out of memory/i.test(j.remark);
             throw err;
           }
-          data = j;
+          return j;
         } catch (e) {
           lastErr = e;
           if (e.skipMirror) break;
@@ -1268,54 +1273,84 @@ async function kwSearchPOIs(){
           clearTimeout(timer);
         }
       }
-      if (data) break;
     }
-    if (searchId !== kwPoiSearchId) return;
-    if (!data) throw lastErr || new Error("Alle Overpass-Server nicht erreichbar");
-    const typeById = {};
-    KW_POI_TYPES.forEach(t => { typeById[t.id] = t; });
-    const rawItems = (data.elements || []).map(el => {
-      const plat = el.lat ?? el.center?.lat;
-      const plon = el.lon ?? el.center?.lon;
-      if (typeof plat !== "number" || typeof plon !== "number") return null;
-      const dist = kwHaversine(lat, lon, plat, plon);
-      const az = kwBearing(lat, lon, plat, plon);
-      const type = kwGuessPoiType(el, queryTypes);
-      const hasName = !!el.tags?.name;
-      return {
-        name: el.tags?.name || (typeById[type]?.label || "Ohne Namen"),
-        hasName, lat: plat, lon: plon, dist, az, type,
-      };
-    }).filter(Boolean).sort((a,b) => a.dist - b.dist);
+    throw lastErr || new Error("Alle Overpass-Server nicht erreichbar");
+  };
 
-    const items = kwDedupePois(rawItems).slice(0, 40);
+  const typeById = {};
+  KW_POI_TYPES.forEach(t => { typeById[t.id] = t; });
+  const toItems = (data, t) => (data.elements || []).map(el => {
+    const plat = el.lat ?? el.center?.lat;
+    const plon = el.lon ?? el.center?.lon;
+    if (typeof plat !== "number" || typeof plon !== "number") return null;
+    const hasName = !!el.tags?.name;
+    // Treffer gehört zu der Kategorie, nach der gerade gesucht wurde
+    return {
+      name: el.tags?.name || (t.label || "Ohne Namen"),
+      hasName, lat: plat, lon: plon, dist: kwHaversine(lat, lon, plat, plon), az: kwBearing(lat, lon, plat, plon), type: t.id,
+    };
+  }).filter(Boolean).sort((a, b) => a.dist - b.dist);
 
-    kwState.poisAll = items;
-    kwApplyPoiFilter();
-    // Früher blieb bei 0 Treffern "Suche läuft …" einfach stehen – jetzt klare Rückmeldung.
-    if (!items.length) {
-      const next = KW_POI_RADII.find(r => r > radius);
-      statusEl.textContent = `Keine passenden Orte im Umkreis von ${radiusLabel} gefunden.`;
-      if (next) {
-        const btn = document.createElement("button");
-        btn.className = "kw-btn kw-btn-ghost kw-poi-widen";
-        btn.textContent = `Umkreis auf ${next < 1000 ? next + " m" : next / 1000 + " km"} erweitern`;
-        btn.addEventListener("click", () => {
-          kwState.poiRadius = next;
-          localStorage.setItem("kw-poi-radius", String(next));
-          kwRenderPoiRadius();
-          kwSearchPOIs();
-        });
-        statusEl.appendChild(document.createElement("br"));
-        statusEl.appendChild(btn);
-      }
-    } else {
-      statusEl.textContent = `${items.length} ${items.length === 1 ? "Ort" : "Orte"} im Umkreis von ${radiusLabel}`
-        + (kwState.gpsAccuracy && kwState.locationMode !== "manual" ? ` · Standort auf ca. ${Math.round(kwState.gpsAccuracy)} m genau` : "");
+  // Pro Kategorie die nächstgelegenen behalten. Früher wurden ALLE Kategorien zusammen auf die
+  // 40 nächsten gekürzt – dichte Kategorien (Haltestellen, Parkplätze, Restaurants) verdrängten
+  // dann seltenere wie Krankenhaus, Museum oder Tierpark komplett aus der Liste.
+  const perCat = Math.max(8, Math.ceil(60 / queryTypes.length));
+  const got = {}, failed = {};
+  let idx = 0, done = 0;
+  const worker = async () => {
+    while (idx < queryTypes.length) {
+      const t = queryTypes[idx++];
+      if (searchId !== kwPoiSearchId) return;
+      statusEl.textContent = `Suche ${t.label} … (${done + 1} von ${queryTypes.length}, Umkreis ${radiusLabel})`;
+      try { got[t.id] = kwDedupePois(toItems(await fetchType(t), t)).slice(0, perCat); }
+      catch (e) { if (e.stale) return; failed[t.id] = e.heavy ? "heavy" : "busy"; }
+      done++;
     }
-  } catch (e) {
-    if (searchId !== kwPoiSearchId) return;
-    statusEl.textContent = "Suche derzeit nicht möglich (Server überlastet oder ohne Antwort), bitte in 1–2 Minuten erneut versuchen.";
+  };
+  await Promise.all([worker(), worker()]);
+  if (searchId !== kwPoiSearchId) return;
+
+  const okTypes = queryTypes.filter(t => got[t.id]);
+  if (!okTypes.length) {
+    const heavy = queryTypes.some(t => failed[t.id] === "heavy");
+    statusEl.textContent = heavy
+      ? "Die Suche war für den Kartenserver zu umfangreich – bitte kleineren Umkreis oder weniger Ortstypen wählen."
+      : "Suche derzeit nicht möglich (Server überlastet oder ohne Antwort), bitte in 1–2 Minuten erneut versuchen.";
+    return;
+  }
+  const items = okTypes.flatMap(t => got[t.id]).sort((a, b) => a.dist - b.dist);
+  kwState.poisAll = items;
+  kwApplyPoiFilter();
+
+  const none = okTypes.filter(t => !got[t.id].length).map(t => t.label);
+  const busy = queryTypes.filter(t => failed[t.id] === "busy").map(t => t.label);
+  const heavy = queryTypes.filter(t => failed[t.id] === "heavy").map(t => t.label);
+  let extra = "";
+  if (none.length && items.length) extra += `\nKeine Treffer im Umkreis (in OpenStreetMap nicht eingetragen): ${none.join(", ")}`;
+  if (busy.length) extra += `\nNicht geladen, Server überlastet: ${busy.join(", ")} – bitte gleich noch einmal suchen`;
+  if (heavy.length) extra += `\nFür den Server zu umfangreich: ${heavy.join(", ")} – kleineren Umkreis wählen`;
+  statusEl.style.whiteSpace = "pre-line";
+  // Früher blieb bei 0 Treffern "Suche läuft …" einfach stehen – jetzt klare Rückmeldung.
+  if (!items.length) {
+    const next = KW_POI_RADII.find(r => r > radius);
+    statusEl.textContent = `Keine passenden Orte im Umkreis von ${radiusLabel} gefunden.` + extra;
+    if (next) {
+      const btn = document.createElement("button");
+      btn.className = "kw-btn kw-btn-ghost kw-poi-widen";
+      btn.textContent = `Umkreis auf ${next < 1000 ? next + " m" : next / 1000 + " km"} erweitern`;
+      btn.addEventListener("click", () => {
+        kwState.poiRadius = next;
+        localStorage.setItem("kw-poi-radius", String(next));
+        kwRenderPoiRadius();
+        kwSearchPOIs();
+      });
+      statusEl.appendChild(document.createElement("br"));
+      statusEl.appendChild(btn);
+    }
+  } else {
+    statusEl.textContent = `${items.length} ${items.length === 1 ? "Ort" : "Orte"} im Umkreis von ${radiusLabel}`
+      + (kwState.gpsAccuracy && kwState.locationMode !== "manual" ? ` · Standort auf ca. ${Math.round(kwState.gpsAccuracy)} m genau` : "")
+      + extra;
   }
 }
 
@@ -1326,12 +1361,14 @@ async function kwSearchPOIs(){
    näher als 40 m an einem bereits übernommenen Treffer derselben Kategorie liegen. */
 function kwDedupePois(items){
   const kept = [];
-  const seenNamed = new Set(); // "type|name"
   items.forEach(p => {
     if (p.hasName) {
-      const key = p.type + "|" + p.name.trim().toLowerCase();
-      if (seenNamed.has(key)) return;
-      seenNamed.add(key);
+      // Gleicher Name nur zusammenfassen, wenn nah beieinander (Haltestelle je Fahrtrichtung,
+      // Bahnsteige). Früher galt das im ganzen Umkreis – von Filialen wie "Aldi", "Sparkasse"
+      // oder "Aral" blieb dann nur die nächste übrig, alle weiteren fehlten.
+      const key = p.name.trim().toLowerCase();
+      const near = (p.type === "station" || p.type === "transit") ? 400 : 150;
+      if (kept.some(k => k.type === p.type && k.hasName && k.name.trim().toLowerCase() === key && kwHaversine(k.lat, k.lon, p.lat, p.lon) < near)) return;
       kept.push(p);
       return;
     }
