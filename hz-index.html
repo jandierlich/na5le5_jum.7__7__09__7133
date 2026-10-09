@@ -171,7 +171,16 @@
   .hz-more{display:block;margin:10px auto 0}
   .hz-reset-row{display:flex;justify-content:flex-end;margin:-4px 0 12px}
   .hz-reset-row .icon-btn{font-size:13.5px;font-weight:600;color:var(--sub-onbg)}
-  .hz-reset{margin:2px 0 12px}</style>
+  .hz-reset{margin:2px 0 12px}
+  .hz-legend{padding:6px 14px 14px}
+  .hz-leg{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(226,220,255,.12)}
+  .hz-leg svg{flex:0 0 44px;width:44px;height:44px;fill:none}
+  .hz-leg b{display:block;font-size:13.5px;font-weight:600;color:#fff}
+  .hz-leg span{display:block;font-size:12.5px;color:rgba(226,220,255,.78);line-height:1.4}
+  .hz-leg-sep{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#B9A6F5;margin:12px 0 8px}
+  .hz-leg-cols{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12.5px;color:rgba(226,220,255,.85)}
+  .hz-leg-cols span{display:inline-flex;align-items:center;gap:6px}
+  .hz-leg-cols i{width:11px;height:11px;border-radius:50%;display:inline-block;box-sizing:border-box}</style>
 <link rel="stylesheet" href="./wz-common.css">
 <link rel="stylesheet" href="./wz-unify.css">
 </head>
@@ -278,6 +287,12 @@
       </div>
       <div class="scale-row"><span>Sichtweite bis zum Horizont</span><span class="v" id="hzHorizon">–</span></div>
       <p class="muted small" style="margin-top:8px">Mit üblicher Lichtbrechung der Luft (Faktor 0,13) auf einer glatten Erdkugel. Bei Dunst oder Nebel ist die tatsächliche Sicht oft viel geringer. Ein Objekt jenseits des Horizonts ist im unteren Teil verdeckt – HorizontWahr zeigt im Fadenkreuz an, wie viele Meter etwa.</p>
+    </div>
+    <div class="card">
+      <h2>Zeichen in der Kamera-Ansicht</h2>
+      <div class="instr hz-legend"><div class="hz-leg"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 34V12" stroke="rgba(10,8,30,.42)" stroke-width="3"/><path d="M22 34V12" stroke="#B9A6F5" stroke-width="1.5"/><g opacity="1"><path d="M22 6.5l4.4 5.5-4.4 5.5-4.4-5.5z" fill="#B9A6F5" stroke="rgba(10,8,30,.42)" stroke-width="2.2" stroke-linejoin="round" paint-order="stroke"/></g><path d="M6 34h32" stroke="#E2DCFF" stroke-width="1"/></svg><div><b>Raute mit Strich</b><span>Raute = Spitze des Objekts, Strich = seine Höhe bis zum Fuß.</span></div></div><div class="hz-leg"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 34V12" stroke="rgba(10,8,30,.42)" stroke-width="3" stroke-dasharray="3 3"/><path d="M22 34V12" stroke="#B9A6F5" stroke-width="1.5" stroke-dasharray="3 3"/><g opacity="1"><path d="M22 6.5l4.4 5.5-4.4 5.5-4.4-5.5z" fill="#B9A6F5" stroke="rgba(10,8,30,.42)" stroke-width="2.2" stroke-linejoin="round" paint-order="stroke"/></g><path d="M6 34h32" stroke="#E2DCFF" stroke-width="1"/></svg><div><b>Gestrichelter Strich</b><span>Der untere Teil ist durch die Erdkrümmung verdeckt.</span></div></div><div class="hz-leg"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="24" r="4.6" fill="rgba(10,8,30,.42)"/><circle cx="22" cy="24" r="3.6" fill="none" stroke="#8E75F0" stroke-width="1.6"/><path d="M6 24h32" stroke="#E2DCFF" stroke-width="1" opacity=".6"/></svg><div><b>Ring</b><span>Ein Ort (Dorf oder Stadt), am Boden bzw. am Horizont.</span></div></div><div class="hz-leg"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 34V16" stroke="#B9A6F5" stroke-width="1.5" stroke-dasharray="3 3" opacity=".5"/><g opacity="0.5"><path d="M22 10.5l4.4 5.5-4.4 5.5-4.4-5.5z" fill="#B9A6F5" stroke="rgba(10,8,30,.42)" stroke-width="2.2" stroke-linejoin="round" paint-order="stroke"/></g><path d="M6 30h32" stroke="#E2DCFF" stroke-width="1"/></svg><div><b>Blass</b><span>Liegt ganz hinter dem Horizont – von hier nicht zu sehen.</span></div></div><div class="hz-leg"><svg viewBox="0 0 44 44" aria-hidden="true"><g opacity="1"><path d="M22 16.5l4.4 5.5-4.4 5.5-4.4-5.5z" fill="#B9A6F5" stroke="rgba(10,8,30,.42)" stroke-width="2.2" stroke-linejoin="round" paint-order="stroke"/></g><circle cx="22" cy="22" r="9" fill="none" stroke="#FFD27A" stroke-width="1.5"/></svg><div><b>Goldener Kreis</b><span>Das Objekt im Fadenkreuz; seine Daten stehen unten.</span></div></div><div class="hz-leg"><svg viewBox="0 0 44 44" aria-hidden="true"><text x="22" y="20" text-anchor="middle" font-size="8.5" font-weight="700" fill="#FFD27A" font-family="ui-monospace,Menlo,sans-serif">ZIEL</text><text x="22" y="30" text-anchor="middle" font-size="7.5" fill="#FFD27A" font-family="ui-monospace,Menlo,sans-serif">4,2 km</text></svg><div><b>Goldenes Schild</b><span>Das Ziel, das du in der Liste mit „Suchen“ gewählt hast.</span></div></div>
+        <div class="hz-leg-sep">Farben</div><div class="hz-leg-cols"><span><i style="background:#FFD27A"></i>Kirchen, Sehenswürdigkeiten</span><span><i style="background:#FFE7A8"></i>Leuchttürme, Aussichtspunkte</span><span><i style="background:#B9A6F5"></i>Türme</span><span><i style="background:#E6DDF7"></i>Mühlen</span><span><i style="background:#C3B2F0"></i>Berge, Hochhäuser, Flughäfen</span><span><i style="background:#D8CCFA"></i>Burgen &amp; Schlösser</span><span><i style="background:none;border:1.6px solid #8E75F0"></i>Orte</span></div>
+      </div>
     </div>
     <div class="card">
       <h2>So genau ist die Ansicht</h2>
@@ -535,6 +550,8 @@ function camStop(stream, video){
     toast("Auswahl zurückgesetzt");
   });
 
+  /* Höhe über dem Meeresspiegel: bei Bergen der OSM-Wert, sonst die geladene Geländehöhe (Open-Meteo) */
+  function seaLevel(it){ return it.c === "berg" && it.x != null ? it.x : (it.e != null ? it.e : null); }
   /* ---------- Geometrie ---------- */
   function hav(la1, lo1, la2, lo2){ var a = Math.sin((la2 - la1) * D2R / 2), b = Math.sin((lo2 - lo1) * D2R / 2); var h = a * a + Math.cos(la1 * D2R) * Math.cos(la2 * D2R) * b * b; return 2 * RE * Math.asin(Math.min(1, Math.sqrt(h))); }
   function bear(la1, lo1, la2, lo2){ var y = Math.sin((lo2 - lo1) * D2R) * Math.cos(la2 * D2R), x = Math.cos(la1 * D2R) * Math.sin(la2 * D2R) - Math.sin(la1 * D2R) * Math.cos(la2 * D2R) * Math.cos((lo2 - lo1) * D2R); return ORI.wrap360(Math.atan2(y, x) / D2R); }
@@ -766,7 +783,7 @@ function camStop(stream, video){
     var more = list.length > shown;
     box.innerHTML = list.slice(0, shown).map(function(o, i){
       var it = o.it;
-      return '<div class="hz-item"><span class="hz-ic">' + wzIcon(CAT[it.c].ic) + '</span><span class="hz-main"><b>' + esc(o.n > 1 ? "Windpark · " + o.n + " Windräder" : (it.n || it.t)) + '</b><span>' + [o.n > 1 ? "nächstes Windrad" : (it.n ? it.t : ""), it.c !== "ort" && it.c !== "berg" ? f(it.h, 0) + " m hoch" + (it.k ? "" : " (angenommen)") : it.x != null ? f(it.x, 0) + " m ü. NN" : (it.n ? "" : CAT[it.c].name)].filter(Boolean).map(esc).join(" · ") + '</span></span>' +
+      return '<div class="hz-item"><span class="hz-ic">' + wzIcon(CAT[it.c].ic) + '</span><span class="hz-main"><b>' + esc(o.n > 1 ? "Windpark · " + o.n + " Windräder" : (it.n || it.t)) + '</b><span>' + [o.n > 1 ? "nächstes Windrad" : (it.n ? it.t : ""), it.c !== "ort" && it.c !== "berg" ? f(it.h, 0) + " m hoch" + (it.k ? "" : " (angenommen)") : seaLevel(it) != null ? f(seaLevel(it), 0) + " m ü. NN" : (it.n ? "" : CAT[it.c].name)].filter(Boolean).map(esc).join(" · ") + '</span></span>' +
         '<span class="hz-r">' + km(o.d) + '<small>' + word(o.az) + " " + Math.round(o.az) + '°</small></span><button type="button" class="chip hz-go" data-go="' + data.items.indexOf(it) + '">Suchen</button></div>';
     }).join("") + (more ? '<button type="button" class="chip hz-more" id="hzMore">Weitere ' + Math.min(60, list.length - shown) + ' anzeigen</button>' : "");
     if(more) $("hzMore").addEventListener("click", function(){ shown += 60; renderList(); });
@@ -830,15 +847,18 @@ function camStop(stream, video){
     function inView(p, pad){ return p && p.x > -pad && p.x < W + pad && p.y > -pad && p.y < H + pad; }
     /* Horizont (scheinbar, mit Erdkrümmung) und Richtungsskala */
     var dip = -Math.atan(horizonDist(eye()) / REFF) / D2R;
-    ctx.strokeStyle = GRID + "0.85)"; ctx.lineWidth = 1.2; ctx.beginPath(); var first = true, a, p;
+    ctx.beginPath(); var first = true, a, p;
     for(a = 0; a <= 360; a += 2){ p = P(a, dip); if(!p){ first = true; continue; } if(first){ ctx.moveTo(p.x, p.y); first = false; } else ctx.lineTo(p.x, p.y); }
-    ctx.stroke();
+    /* dunkle Kontur unter der Horizontlinie: auch vor hellem Himmel und weißen Wänden sichtbar */
+    ctx.strokeStyle = "rgba(10,8,30,0.4)"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = GRID + "0.9)"; ctx.lineWidth = 1.2; ctx.stroke();
     var CARD = { 0: "N", 45: "NO", 90: "O", 135: "SO", 180: "S", 225: "SW", 270: "W", 315: "NW" };
     ctx.lineWidth = 1;
     for(a = 0; a < 360; a += 5){
       var h0 = P(a, dip), h1 = P(a, dip - (a % 15 === 0 ? 1.4 : 0.7)); if(!inView(h0, 10) || !h1) continue;
-      ctx.strokeStyle = GRID + "0.9)"; ctx.beginPath(); ctx.moveTo(h0.x, h0.y); ctx.lineTo(h1.x, h1.y); ctx.stroke();
-      if(a % 15 === 0){ var hl = P(a, dip - 3.2); if(hl) mono((CARD[a] ? CARD[a] + " " : "") + a + "°", hl.x, hl.y + 4, CARD[a] ? 12 : 10.5, CARD[a] ? "#fff" : GRID + "0.85)"); }
+      ctx.beginPath(); ctx.moveTo(h0.x, h0.y); ctx.lineTo(h1.x, h1.y);
+      ctx.strokeStyle = "rgba(10,8,30,0.4)"; ctx.lineWidth = 2.6; ctx.stroke(); ctx.strokeStyle = GRID + "0.9)"; ctx.lineWidth = 1; ctx.stroke();
+      if(a % 15 === 0){ var hl = P(a, dip - 3.2); if(hl) mono((CARD[a] ? CARD[a] + " " : "") + a + "°", hl.x, hl.y + 4, CARD[a] ? 12 : 10.5, CARD[a] ? "#fff" : "#E6DDF7"); }
     }
     /* Objekte projizieren */
     var vis = [];
@@ -847,14 +867,26 @@ function camStop(stream, video){
       var pb = P(o.az, o.altBase, 0.08);
       o.pt = pt; o.pb = pb; vis.push(o);
     });
-    /* Marken: senkrechter Strich vom Fuß zur Spitze (verdeckter Teil gestrichelt) */
+    /* Marken: kräftig mit dunklem Rand, damit sie auf hellem und dunklem Kamerabild gleich gut zu sehen sind.
+       Senkrechter Strich vom Fuß zur Spitze (gestrichelt, wenn unten etwas durch die Erdkrümmung verdeckt ist).
+       Volle Deckkraft für sichtbare Objekte; nur Objekte ganz hinter dem Horizont bleiben gedämpft. */
+    var HALO = "rgba(10,8,30,0.42)";
     vis.forEach(function(o){
-      var c = CAT[o.it.c].col, far = o.hid >= o.it.h && o.it.c !== "ort" && o.it.c !== "berg";
-      ctx.globalAlpha = far ? 0.45 : Math.max(0.55, 1 - o.d / 40000);
-      if(o.it.c === "ort"){ ctx.strokeStyle = c; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(o.pt.x, o.pt.y, 3, 0, 6.283); ctx.stroke(); }
-      else {
-        if(o.pb){ ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.setLineDash(o.hid > 0 ? [2, 3] : []); ctx.beginPath(); ctx.moveTo(o.pb.x, o.pb.y); ctx.lineTo(o.pt.x, o.pt.y); ctx.stroke(); ctx.setLineDash([]); }
-        ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(o.pt.x, o.pt.y - 4); ctx.lineTo(o.pt.x + 3.2, o.pt.y); ctx.lineTo(o.pt.x, o.pt.y + 4); ctx.lineTo(o.pt.x - 3.2, o.pt.y); ctx.closePath(); ctx.fill();
+      var c = CAT[o.it.c].col, far = o.hid >= o.it.h && o.it.c !== "ort" && o.it.c !== "berg", x = o.pt.x, y = o.pt.y;
+      ctx.globalAlpha = far ? 0.5 : 1;
+      if(o.it.c === "ort"){
+        ctx.beginPath(); ctx.arc(x, y, 4.6, 0, 6.283); ctx.fillStyle = HALO; ctx.fill();
+        ctx.lineWidth = 1.6; ctx.strokeStyle = c; ctx.beginPath(); ctx.arc(x, y, 3.6, 0, 6.283); ctx.stroke();
+      } else {
+        if(o.pb && Math.abs(o.pb.y - y) > 2){
+          var dash = o.hid >= 0.5 ? [3, 3] : [];
+          ctx.setLineDash(dash); ctx.lineCap = "round";
+          ctx.strokeStyle = HALO; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(o.pb.x, o.pb.y); ctx.lineTo(x, y); ctx.stroke();
+          ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(o.pb.x, o.pb.y); ctx.lineTo(x, y); ctx.stroke();
+          ctx.setLineDash([]); ctx.lineCap = "butt";
+        }
+        ctx.beginPath(); ctx.moveTo(x, y - 5.5); ctx.lineTo(x + 4.4, y); ctx.lineTo(x, y + 5.5); ctx.lineTo(x - 4.4, y); ctx.closePath();
+        ctx.lineJoin = "round"; ctx.strokeStyle = HALO; ctx.lineWidth = 2.2; ctx.stroke(); ctx.fillStyle = c; ctx.fill();
       }
       ctx.globalAlpha = 1;
     });
@@ -902,7 +934,8 @@ function camStop(stream, video){
       var y = st.y;
       placed.push({ x0: x0, x1: x0 + w, y0: ty - 26, y1: ty + 4 }); count++;
       var tgt = AR.target && o.it === AR.target, col = tgt ? GOLD : "#fff";
-      ctx.strokeStyle = tgt ? GOLD : GRID + "0.55)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx, o.pt.y - 5); ctx.lineTo(sx, y + 4); ctx.stroke();
+      ctx.strokeStyle = HALO; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(sx, o.pt.y - 7); ctx.lineTo(sx, y + 4); ctx.stroke();
+      ctx.strokeStyle = tgt ? GOLD : GRID + "0.8)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx, o.pt.y - 7); ctx.lineTo(sx, y + 4); ctx.stroke();
       var tx = align === "center" ? sx : align === "left" ? x0 + 4 : x0 + w - 4;
       mono(t1, tx, y - 12, 11, col, align, 700);
       mono(l.t2, tx, y + 1, 10, tgt ? GOLD : "#E6DDF7", align, 500);
@@ -966,13 +999,13 @@ function camStop(stream, video){
     var o = AR.sel;
     if(o){
       var it = o.it, hidTxt;
-      if(it.c === "ort") hidTxt = o.hid > 0 ? "Boden ca. " + f(o.hid, 0) + " m unter dem Horizont" : "vor dem Horizont";
-      else if(it.c === "berg") hidTxt = it.x != null ? f(it.x, 0) + " m ü. NN" : "Höhe unbekannt";
-      else hidTxt = o.hid <= 0 ? "ganz sichtbar" : o.hid >= it.h ? "hinter dem Horizont" : "unten ca. " + f(o.hid, 0) + " m verdeckt";
+      if(it.c === "ort") hidTxt = o.hid >= 0.5 ? "Boden ca. " + f(o.hid, 0) + " m unter dem Horizont" : "vor dem Horizont";
+      else if(it.c === "berg") hidTxt = seaLevel(it) != null ? f(seaLevel(it), 0) + " m ü. NN" : "Höhe unbekannt";
+      else hidTxt = o.hid < 0.5 ? "ganz sichtbar" : o.hid >= it.h ? "hinter dem Horizont" : "unten ca. " + f(o.hid, 0) + " m verdeckt";
       html = '<div style="font-size:15px;font-weight:700;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.n || it.t) + ' <span style="font-weight:500;color:#B9A6F5;font-size:12.5px">' + esc(it.n ? it.t : CAT[it.c].name) + '</span></div>' +
         '<div class="ar-grid three">' + cell("Entfernung", km(o.d), word(o.az) + " · " + Math.round(o.az) + "°", "gold") +
-        cell("Höhe", it.c === "ort" ? "–" : it.c === "berg" ? (it.x != null ? f(it.x, 0) + " m" : "–") : f(it.h, 0) + " m", it.c === "ort" ? "" : it.c === "berg" ? "ü. NN" : it.k ? "laut OSM" : "angenommen") +
-        cell("Sicht", o.hid <= 0 || it.c === "berg" ? "frei" : o.hid >= it.h && it.c !== "ort" ? "verdeckt" : f(o.hid, 0) + " m", hidTxt) + '</div>';
+        cell("Höhe", it.c === "ort" || it.c === "berg" ? (seaLevel(it) != null ? f(seaLevel(it), 0) + " m" : "–") : f(it.h, 0) + " m", it.c === "ort" || it.c === "berg" ? (seaLevel(it) != null ? "ü. NN" : "") : it.k ? "laut OSM" : "angenommen") +
+        cell("Sicht", o.hid < 0.5 || it.c === "berg" ? "frei" : o.hid >= it.h && it.c !== "ort" ? "verdeckt" : f(o.hid, 0) + " m", hidTxt) + '</div>';
     } else {
       var n = vis.length;
       html = '<div class="ar-grid three">' + cell("Blickrichtung", word(v.az) + " " + Math.round(v.az) + "°", "Neigung " + (v.alt >= 0 ? "+" : "−") + Math.abs(Math.round(v.alt)) + "°") +
