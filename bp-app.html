@@ -18,6 +18,7 @@
 <meta name="apple-mobile-web-app-title" content="WahrZentrale">
 <meta name="theme-color" content="#5A2FBE">
 
+<link rel="stylesheet" href="./wz-common.css">
 <link rel="stylesheet" href="bp-style.css">
 <link rel="stylesheet" href="./wz-unify.css">
 </head>
@@ -31,5 +32,22 @@
 <script src="bp-crop.js"></script>
 <script src="bp-voice.js"></script>
 <script src="bp-app.js"></script>
+<script src="./wz-onboarding.js"></script>
+<script>
+/* Kurze Einführung beim ersten Start (einheitlich wie in allen Apps); ausführlich unter „Anleitung“ */
+(function(){
+  if(typeof wzOnboarding !== 'function') return;
+  function ic(f){ try{ return typeof f === 'function' ? f() : ''; }catch(e){ return ''; } }
+  wzOnboarding({
+    key: 'bp_onboarded',
+    slides: [
+      { title: 'Willkommen bei BelegParkWahr', text: 'Parkscheine, Belege, Fahrten und Kilometerstände an einem Ort – fotografiert, gesprochen oder getippt.' },
+      { iconHtml: ic(typeof mapPinSvg !== 'undefined' ? mapPinSvg : null), title: 'Erfassen in Sekunden', text: 'Unter „Parken“ und „Kosten“ fotografierst du einen Schein oder Beleg. Datum und Betrag werden auf deinem Gerät erkannt – du bestätigst nur noch. Gedanken zu einer Fahrt sprichst du unter „Notizen“ ein.' },
+      { iconHtml: ic(typeof fileTextSvg !== 'undefined' ? fileTextSvg : null), title: 'Überblick und Export', text: '„Monat & Jahr“ zeigt alle Summen und erstellt eine Übersicht als PDF – praktisch für die Steuer oder die Abrechnung. Die Karte zeigt, wo du überall geparkt hast.' },
+      { iconHtml: ic(typeof bookSvg !== 'undefined' ? bookSvg : null), title: 'Alles bleibt bei dir', text: 'Fotos und Einträge werden nur auf diesem Gerät gespeichert. Jeden Bereich erklärt dir die „Anleitung“ ausführlich.' }
+    ]
+  });
+})();
+</script>
 </body>
 </html>

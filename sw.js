@@ -23,7 +23,7 @@
    BUILD ändert sich dabei, damit Geräte die neue Liste übernehmen.
    ============================================================ */
 
-const BUILD = '32157935dd';
+const BUILD = '51c4e9a2b3';
 const CACHE = 'wahrzentrale-' + BUILD;
 const LIBS_CACHE = 'wahrzentrale-libs-v4';
 // Große Geodaten von WowarWahr: eigener Speicher, der Updates der App überdauert
@@ -67,6 +67,7 @@ const PRECACHE = [
 "./hw-astro.js",
 "./hw-einstellungen.html",
 "./hw-icon-192.png",
+"./hw-insights.js",
 "./hw-index.html",
 "./hw-info.html",
 "./hw-kompass.html",
@@ -217,6 +218,7 @@ const PRECACHE = [
 "./wow-ui.js",
 "./wow-zip.js",
 "./wz-apps.js",
+"./wz-ask.js",
 "./wz-backup.js",
 "./wz-common.css",
 "./wz-core.js",

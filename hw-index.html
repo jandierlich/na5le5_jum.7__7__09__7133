@@ -16,6 +16,7 @@
 <meta name="apple-mobile-web-app-title" content="WahrZentrale">
 <title>HimmelsWahr</title>
 <link rel="icon" href="hw-icon-192.png" type="image/png">
+<link rel="stylesheet" href="./wz-common.css">
 <link rel="stylesheet" href="hw-style.css">
 <link rel="stylesheet" href="./wz-unify.css">
 </head>
@@ -47,6 +48,13 @@
     <p class="hw-day-summary" id="hw-day-summary" style="display:none;"></p>
   </section>
 
+  <div class="hw-card hw-ins-card" id="heute-lohnt" data-hw-section="insights" style="display:none;">
+    <h2>Heute lohnt sich …</h2>
+    <p class="hw-ins-sub">Was der Himmel heute für dich bereithält · antippen für das Warum</p>
+    <div id="hw-insights"></div>
+    <p class="hw-attrib">Wetterdaten von <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>), aufbereitet; Sonne, Mond und Planeten auf deinem Gerät berechnet</p>
+  </div>
+
   <div class="hw-card" id="hw-nowcast-card" data-hw-section="nowcast" style="display:none;">
     <h2>Regen in den nächsten 2 Stunden</h2>
     <div id="hw-nowcast"></div>
@@ -71,9 +79,10 @@
       <div id="hw-r-precip-chart"></div>
       <p style="font-size:12px;color:var(--text-secondary);text-align:center;margin:2px 0 0;">Regenwahrscheinlichkeit, nächste Stunden</p>
       <div style="display:flex;justify-content:center;gap:22px;margin-top:14px;">
-        <div id="hw-r-score-ring"></div>
-        <div id="hw-r-uv-ring"></div>
+        <div id="hw-r-score-ring" class="hw-tap" role="button" tabindex="0" aria-label="Draußen-Score – antippen für eine Erklärung"></div>
+        <div id="hw-r-uv-ring" class="hw-tap" role="button" tabindex="0" aria-label="UV-Index – antippen für eine Erklärung"></div>
       </div>
+      <p style="font-size:12px;color:var(--text-secondary);text-align:center;margin:6px 0 0;">Kreise antippen für eine Erklärung</p>
       <div class="hw-rain-alert-row" style="margin-top:14px;">
         <button class="hw-btn" id="hw-rain-alert-toggle" onclick="hwToggleRainAlert()" style="margin-bottom:6px;"><span data-hwi="bell" data-hwi-size="16"></span> Regen-Alarm einschalten</button>
         <p class="hw-rain-alert-note" style="font-size:12px;margin:0;">Meldet Regen, solange HimmelsWahr geöffnet ist.</p>
@@ -116,14 +125,25 @@
 <script src="hw-astro.js"></script>
 <script src="hw-app.js"></script>
 <script src="hw-sky.js"></script>
+<script src="./wz-onboarding.js"></script>
+<script src="hw-insights.js"></script>
 <script>
 hwRenderNav('hw-index.html');
 
 hwApplySectionOrder();
 
-if(!localStorage.getItem('hw-intro-seen')){
-  localStorage.setItem('hw-intro-seen', '1');
-  location.replace('hw-info.html');
+/* Kurze Einführung beim ersten Start (einheitlich wie in allen Apps); die ausführliche steht unter „Einführung“ */
+if(typeof wzOnboarding === 'function'){
+  var hwOnb = wzOnboarding({
+    key: 'hw-onboarded',
+    slides: [
+      { title: 'Willkommen bei HimmelsWahr', text: 'Wetter, Luft, Abendrot und Nachthimmel für deinen Ort. Der Hintergrund zeigt den echten Himmel über dir – von Morgenrot bis Sternennacht.' },
+      { iconHtml: hwIcon('sparkles', 32), title: 'Heute lohnt sich …', text: 'Oben steht, was der Himmel heute für dich bereithält: eine klare Sternennacht mit sichtbaren Planeten, eine Regenbogen-Chance oder Frost in der kommenden Nacht. Antippen zeigt das Warum.' },
+      { iconHtml: hwIcon('compass', 32), title: 'Alles in fünf Tabs', html: '<p>Unten wechselst du zwischen <b>Start</b>, <b>Luft</b>, <b>Abend</b>, <b>Nacht</b> und <b>Kompass</b>. Unter <b>Mehr</b> findest du Orte, Einstellungen und die ausführliche Einführung.</p>' +
+        '<div class="wz-onb-row"><span class="hw-dot hw-dot-gruen" style="margin-top:7px"></span><span><b>Grün</b> – gut, lohnt sich</span></div><div class="wz-onb-row"><span class="hw-dot hw-dot-gelb" style="margin-top:7px"></span><span><b>Gelb</b> – möglich, durchwachsen</span></div><div class="wz-onb-row"><span class="hw-dot hw-dot-rot" style="margin-top:7px"></span><span><b>Rot</b> – eher ungünstig</span></div>' },
+      { iconHtml: hwIcon('pin', 32), title: 'Deine Daten', text: 'Nur für Wetterdaten geht dein Standort an Open-Meteo.com (Schweiz) – und nur, wenn du eine Wetterfunktion nutzt. Sonne, Mond, Planeten und Sterne berechnet dein Gerät selbst.' }
+    ]
+  });
 }
 
 var hwLastTemp = 0;
@@ -162,6 +182,7 @@ function hwLoadLage(){
     hwSetSkyCloud(c.cloud_cover);
     hwRenderScene('hw-scene', c.weather_code, lat, lon, c.cloud_cover);
     hwRenderDayBand('hw-day-band', data, lat, lon);
+    hwRenderInsights(data, lat, lon);
     hwRenderDaySummary('hw-day-summary', data);
 
     /* Regen in den nächsten 2 Stunden */
@@ -210,6 +231,43 @@ function hwLoadLage(){
       'Standort oder Wetterdaten nicht verfügbar: ' + (err && err.message ? err.message : 'Zugriff verweigert') + '. Du kannst auch oben einen Ort suchen.', true);
   });
 }
+/* ---------- Heute lohnt sich ---------- */
+var hwInsightsLast = [];
+function hwInsightsOff(){ try{ var o = JSON.parse(localStorage.getItem('hw-insights-off') || '[]'); return Array.isArray(o) ? o : []; }catch(e){ return []; } }
+function hwRenderInsights(data, lat, lon){
+  var card = document.getElementById('heute-lohnt');
+  if(typeof hwInsights !== 'function'){ card.style.display = 'none'; return; }
+  var off = hwInsightsOff();
+  var list = hwInsights(data, lat, lon).filter(function(r){ return off.indexOf(r.id) === -1; }).slice(0, 5);
+  hwInsightsLast = list;
+  var box = document.getElementById('hw-insights');
+  if(!list.length){
+    box.innerHTML = '<p class="hw-ins-empty">Gerade nichts Besonderes. Sobald sich ein Blick nach oben lohnt oder Frost droht, steht es hier.</p>';
+  } else {
+    box.innerHTML = list.map(function(r, i){
+      return '<button type="button" class="hw-ins-row" data-i="' + i + '">' +
+        '<span class="hw-ins-ic' + (r.stufe ? ' ' + r.stufe : '') + '">' + hwInsightIcon(r.icon, 20) + '</span>' +
+        '<span class="hw-ins-txt"><strong>' + hwEsc(r.title) + '</strong><span>' + hwEsc(r.text) + '</span></span>' +
+        '<span class="hw-ins-chev" aria-hidden="true">›</span></button>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.hw-ins-row'), function(b){
+      b.addEventListener('click', function(){ hwOpenInsight(hwInsightsLast[+b.getAttribute('data-i')]); });
+    });
+  }
+  card.style.display = 'block';
+  if(location.hash === '#heute-lohnt' && !hwRenderInsights.scrolled){ hwRenderInsights.scrolled = true; card.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+}
+function hwOpenInsight(r){
+  if(!r) return;
+  var amp = r.stufe ? '<span class="hw-ampel ' + r.stufe + '" style="margin-bottom:10px;"><span class="hw-dot hw-dot-' + r.stufe + '"></span>' +
+    (r.stufe === 'gruen' ? 'Lohnt sich' : (r.stufe === 'gelb' ? 'Möglich' : 'Eher nicht')) + '</span>' : '';
+  var more = r.href && r.href.indexOf('hw-index') === -1 ? '<a class="hw-btn" href="' + r.href + '" style="margin-top:6px;">Mehr dazu im Nachthimmel</a>' : '';
+  hwOpenSheet(hwEsc(r.title),
+    amp + '<p style="margin:0 0 12px;">' + hwEsc(r.text) + '</p>' +
+    '<h3 style="margin:0 0 6px;font-size:15px;">Warum?</h3><p style="font-size:14px;line-height:1.55;color:var(--text-secondary);margin:0 0 12px;">' + hwEsc(r.why) + '</p>' +
+    '<p style="font-size:12px;color:var(--text-secondary);margin:0 0 10px;">Einzelne Hinweise kannst du in den Einstellungen ausblenden.</p>' + more);
+}
+
 document.addEventListener('DOMContentLoaded', function(){
   window.hwPageReload = hwLoadLage;
   hwUpdateRainAlertButton();
@@ -219,6 +277,23 @@ document.addEventListener('DOMContentLoaded', function(){
   if(hwHasActiveLocationReady()) hwLoadLage();
   /* Werte automatisch alle 10 Minuten auffrischen, solange die Seite geöffnet ist */
   setInterval(function(){ if(!document.hidden && hwHasActiveLocationReady()) hwLoadLage(); }, 600000);
+
+  /* Antippen erklärt: Draußen-Score und UV-Index */
+  function hwTapInfo(id, fn){ var el = document.getElementById(id); if(!el) return; el.addEventListener('click', fn); el.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fn(); } }); }
+  hwTapInfo('hw-r-score-ring', function(){
+    hwOpenSheet('Draußen-Score',
+      '<p>Wie angenehm es gerade draußen ist, von 0 bis 100. Abzüge gibt es für Regenwahrscheinlichkeit, Wind über 20 km/h, Böen über 45 km/h, gefühlte Kälte unter 12 °C, Hitze über 26 °C und einen sehr hohen UV-Index.</p>' +
+      '<div class="hw-row"><span><span class="hw-dot hw-dot-gruen"></span>70–100</span><span>Gut geeignet für draußen</span></div>' +
+      '<div class="hw-row"><span><span class="hw-dot hw-dot-gelb"></span>40–69</span><span>Mit Einschränkungen</span></div>' +
+      '<div class="hw-row"><span><span class="hw-dot hw-dot-rot"></span>0–39</span><span>Eher drinnen bleiben</span></div>');
+  });
+  hwTapInfo('hw-r-uv-ring', function(){
+    hwOpenSheet('UV-Index',
+      '<p>Stärke der sonnenbrandwirksamen UV-Strahlung nach der Skala der Weltgesundheitsorganisation (WHO).</p>' +
+      '<div class="hw-row"><span><span class="hw-dot hw-dot-gruen"></span>0–2 niedrig</span><span>Kein Schutz nötig</span></div>' +
+      '<div class="hw-row"><span><span class="hw-dot hw-dot-gelb"></span>3–5 mäßig</span><span>Mittags Schatten, Sonnencreme</span></div>' +
+      '<div class="hw-row"><span><span class="hw-dot hw-dot-rot"></span>ab 6 hoch</span><span>Schutz unbedingt nötig</span></div>');
+  });
 
   var detailsToggle = document.getElementById('hw-details-toggle');
   var detailsBody = document.getElementById('hw-details-body');

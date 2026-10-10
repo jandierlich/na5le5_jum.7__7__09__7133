@@ -58,21 +58,34 @@
 
   /* ---------- Himmel: Sonne und Mond (Näherungsformeln, lokal) ---------- */
   var RAD = Math.PI / 180;
+  /* Sonnenauf- und -untergang nach dem NOAA-Verfahren (minutengenau, gleiche Werte wie HimmelsWahr) */
   function sunTimes(date, lat, lon) {
-    var d = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12);
-    var n = Math.round(d / 864e5 + 2440587.5 - 2451545.0 + 0.0008);
-    var Js = n - lon / 360;
-    var M = (357.5291 + 0.98560028 * Js) % 360;
-    var C = 1.9148 * Math.sin(M * RAD) + 0.02 * Math.sin(2 * M * RAD) + 0.0003 * Math.sin(3 * M * RAD);
-    var L = (M + C + 180 + 102.9372) % 360;
-    var Jt = 2451545.0 + Js + 0.0053 * Math.sin(M * RAD) - 0.0069 * Math.sin(2 * L * RAD);
-    var dec = Math.asin(Math.sin(L * RAD) * Math.sin(23.4397 * RAD));
-    var cosH = (Math.sin(-0.833 * RAD) - Math.sin(lat * RAD) * Math.sin(dec)) / (Math.cos(lat * RAD) * Math.cos(dec));
-    if (cosH > 1) return { polar: "night" };
-    if (cosH < -1) return { polar: "day" };
-    var H = Math.acos(cosH) / RAD;
-    var toDate = function (J) { return new Date((J - 2440587.5) * 864e5); };
-    return { rise: toDate(Jt - H / 360), set: toDate(Jt + H / 360) };
+    var day0 = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    function solar(ms) {
+      var jd = ms / 864e5 + 2440587.5, T = (jd - 2451545) / 36525;
+      var L0 = (280.46646 + T * (36000.76983 + T * 0.0003032)) % 360, M = 357.52911 + T * (35999.05029 - 0.0001537 * T);
+      var e = 0.016708634 - T * (0.000042037 + 0.0000001267 * T);
+      var C = Math.sin(M * RAD) * (1.914602 - T * (0.004817 + 0.000014 * T)) + Math.sin(2 * M * RAD) * (0.019993 - 0.000101 * T) + Math.sin(3 * M * RAD) * 0.000289;
+      var om = 125.04 - 1934.136 * T, lam = L0 + C - 0.00569 - 0.00478 * Math.sin(om * RAD);
+      var eps = 23 + (26 + (21.448 - T * (46.815 + T * (0.00059 - T * 0.001813))) / 60) / 60 + 0.00256 * Math.cos(om * RAD);
+      var dec = Math.asin(Math.sin(eps * RAD) * Math.sin(lam * RAD)), y = Math.pow(Math.tan(eps * RAD / 2), 2);
+      var eqt = 4 / RAD * (y * Math.sin(2 * L0 * RAD) - 2 * e * Math.sin(M * RAD) + 4 * e * y * Math.sin(M * RAD) * Math.cos(2 * L0 * RAD) - 0.5 * y * y * Math.sin(4 * L0 * RAD) - 1.25 * e * e * Math.sin(2 * M * RAD));
+      return { dec: dec, eqt: eqt };
+    }
+    function ev(sign) {
+      var ms = day0 + 12 * 36e5, out = null;
+      for (var i = 0; i < 3; i++) {
+        var so = solar(ms), cosH = Math.cos(90.833 * RAD) / (Math.cos(lat * RAD) * Math.cos(so.dec)) - Math.tan(lat * RAD) * Math.tan(so.dec);
+        if (cosH > 1) return "night"; if (cosH < -1) return "day";
+        var mins = 720 - 4 * (lon - sign * Math.acos(cosH) / RAD) - so.eqt;
+        ms = day0 + mins * 6e4; out = ms;
+      }
+      return new Date(out);
+    }
+    var set = ev(1), rise = ev(-1);
+    if (set === "night" || rise === "night") return { polar: "night" };
+    if (set === "day" || rise === "day") return { polar: "day" };
+    return { rise: rise, set: set };
   }
   // Sonnenhöhe in Grad (gleiche Näherung wie oben, plus Sternzeit)
   function sunAlt(date, lat, lon) {
@@ -113,6 +126,8 @@
   function svg(p) { return '<svg class="wz-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + "</svg>"; }
 
   var wxReq = null;
+  /* Stundenwerte für „Himmels-Tipp“ (gleiche Liste wie HW_INSIGHTS_HOURLY in hw-insights.js) */
+  var WX_HOURLY = "temperature_2m,apparent_temperature,dew_point_2m,precipitation_probability,precipitation,weather_code,cloud_cover,cloud_cover_low,wind_speed_10m,wind_gusts_10m,direct_radiation";
   function fetchWeather(loc) {
     if (!wxReq) wxReq = fetchWeatherNow(loc).catch(function (e) { wxReq = null; throw e; });
     return wxReq;
@@ -120,9 +135,10 @@
   function fetchWeatherNow(loc) {
     var lat = Math.round(loc.lat * 100) / 100, lon = Math.round(loc.lon * 100) / 100;
     var cache = json("wz_today_wx", null);
-    if (cache && cache.lat === lat && cache.lon === lon && Date.now() - cache.t < 30 * 60 * 1000) return Promise.resolve(cache.data);
+    if (cache && cache.lat === lat && cache.lon === lon && Date.now() - cache.t < 30 * 60 * 1000 && cache.data && cache.data.hourly && cache.data.hourly.direct_radiation) return Promise.resolve(cache.data);
     var url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
-      "&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1";
+      "&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
+      "&hourly=" + WX_HOURLY + "&timezone=auto&forecast_days=2";
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 8000);
     return fetch(url, ctrl ? { signal: ctrl.signal } : undefined).then(function (r) {
@@ -215,6 +231,7 @@
   /* Heute: Karten ein-/ausblenden und sortieren (wz_today_cfg, nur lokal) */
   var TODAY_CARDS = [
     { id: "wetter", name: "Wetter", desc: "Temperatur und Regen an deinem Ort", def: true, ic: "weather" },
+    { id: "himmelstipp", name: "Himmels-Tipp", desc: "Sternenhimmel, Regenbogen und Frost (HimmelsWahr)", def: true, cond: true, ic: "hw" },
     { id: "gedanken", name: "Offene Gedanken", desc: "aus LosDenkWahr", def: true, cond: true, ic: "thought" },
     { id: "zahlung", name: "Nächste Zahlung", desc: "aus AlltagWahr", def: true, cond: true, ic: "euro" },
     { id: "urlaub", name: "Urlaubs-Countdown", desc: "aus Keysglade", def: true, cond: true, ic: "plane" },
@@ -245,7 +262,7 @@
     if (eb) { eb.textContent = todayEdit ? "Fertig" : "Anpassen"; eb.classList.toggle("on", todayEdit); eb.setAttribute("aria-pressed", String(todayEdit)); }
     if (todayEdit) { renderTodayEditor(); return; }
     var loc = window.wzCore ? wzCore.knownLocation() : null;
-    var cfg = todayCfg(), wxOn = get("wz_today_weather") === "on", wxShown = false, wxAsk = false;
+    var cfg = todayCfg(), wxOn = get("wz_today_weather") === "on", wxShown = false, wxAsk = false, tipShown = false;
 
     var build = {
       wetter: function () {
@@ -254,6 +271,11 @@
           button: '<button type="button" class="r-btn" id="wxLoc">Ermitteln</button>' });
         wxShown = true;
         return '<a class="row" href="./hw-index.html" id="wxRow"><span class="r-ic">' + icon("weather") + '</span><span class="r-txt"><span class="r-l">Wetter' + (loc.name ? " · " + esc(loc.name) : "") + '</span><span class="r-v" style="display:block">Wird geladen …</span></span>' + CHEV + "</a>";
+      },
+      himmelstipp: function () {
+        if (!wxOn || !loc) return "";
+        tipShown = true;
+        return '<a class="row" href="./hw-index.html#heute-lohnt" id="tipRow" hidden><span class="r-ic">' + icon("hw") + '</span><span class="r-txt"><span class="r-l">Himmels-Tipp</span><span class="r-v" style="display:block"></span></span>' + CHEV + "</a>";
       },
       gedanken: function () {
         var open = thoughtsOpen();
@@ -325,6 +347,24 @@
         renderToday(); renderSky();
       }, function () { l.textContent = "Ermitteln"; }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
     });
+    if (tipShown) {
+      Promise.all([fetchWeather(loc), wzCore.loadScript("./hw-astro.js"), wzCore.loadScript("./hw-insights.js")]).then(function (res) {
+        var r = $("tipRow"), d = res[0]; if (!r || typeof window.hwInsights !== "function") return;
+        var off = []; try { off = JSON.parse(get("hw-insights-off") || "[]") || []; } catch (e) { }
+        var list = window.hwInsights(d, loc.lat, loc.lon).filter(function (x) { return x.prio >= 30 && off.indexOf(x.id) === -1; });
+        if (!list.length) { r.remove(); return; }
+        var top = list[0];
+        r.querySelector(".r-ic").innerHTML = window.hwInsightIcon(top.icon, 22).replace("<svg ", '<svg class="wz-ic" ');
+        r.querySelector(".r-v").textContent = top.title;
+        var n = document.createElement("span"); n.className = "r-note"; n.style.display = "block";
+        n.textContent = top.text + (list.length > 1 ? " · " + (list.length - 1) + (list.length === 2 ? " weiterer Tipp" : " weitere Tipps") + " in HimmelsWahr" : "");
+        var src = document.createElement("span"); src.className = "r-note"; src.style.display = "block";
+        src.textContent = "Wetterdaten: Open-Meteo.com (CC BY 4.0) · Himmel auf dem Gerät berechnet";
+        r.querySelector(".r-txt").appendChild(n);
+        r.querySelector(".r-txt").appendChild(src);
+        r.hidden = false;
+      }).catch(function () { var r = $("tipRow"); if (r) r.remove(); });
+    }
     if (wxShown) {
       fetchWeather(loc).then(function (d) {
         var r = $("wxRow"); if (!r || !d || !d.current) return;
@@ -1453,12 +1493,71 @@
     var raw = String(text);
     return esc(raw.slice(0, i)) + "<mark>" + esc(raw.slice(i, i + q.length)) + "</mark>" + esc(raw.slice(i + q.length));
   }
+  /* ---------- Fragen statt suchen (wz-ask.js) ---------- */
+  var ASK_H = {
+    loc: function () { return window.wzCore ? wzCore.knownLocation() : null; },
+    wxOn: function () { return get("wz_today_weather") === "on"; },
+    fetchWeather: function (loc) { return fetchWeather(loc); },
+    load: function (src) { return wzCore.loadScript(src); },
+    json: json, monthlyTotal: function () { return monthlyTotal(); }, nextPayment: function () { return nextPayment(); },
+    expiringStock: function () { return expiringStock(); }, tripDate: function () { return tripDate(); },
+    tours: function () { return tours(); }, thoughtsOpen: function () { return thoughtsOpen(); },
+    lastParking: function () {
+      return idbReadAll("parken-und-belege", ["parkscheine"]).then(function (r) {
+        var l = (r && r.parkscheine || []).filter(function (p) { return p && p.ort; });
+        l.sort(function (a, b) { return String(b.date || "").localeCompare(String(a.date || "")); });
+        return l[0] || null;
+      }).catch(function () { return null; });
+    }
+  };
+  var askSeq = 0;
+  function askHtml() {
+    return '<div class="res-group" id="askGroup"><h3>Antwort</h3><div class="card today"><div class="row ask-row" id="askRow"><span class="r-ic">' + icon("info") + '</span><span class="r-txt"><span class="r-v" style="display:block">Einen Moment …</span></span></div></div></div>';
+  }
+  function askRender(raw, seq) {
+    window.wzAsk.answer(raw, ASK_H).then(function (a) {
+      if (seq !== askSeq) return;
+      var g = $("askGroup"); if (!g) return;
+      if (!a) {
+        g.querySelector(".card").innerHTML = row({ icon: "info", label: "Darauf weiß ich noch keine Antwort", value: "Frag zum Beispiel so:", note: "" }) + askChips(window.wzAsk.examples.slice(0, 4));
+        bindChips(g); return;
+      }
+      var app = a.app && a.app !== "wz" ? a.app : "info";
+      var btn = a.action === "wx" ? '<button type="button" class="r-btn" id="askWx">Erlauben</button>' : (a.action === "here" ? '<button type="button" class="r-btn" id="askHere">Hier merken</button>' : "");
+      g.querySelector(".card").innerHTML = row({ icon: app, cls: "ask-row", label: "Antwort" + (a.app && a.app !== "wz" ? " · " + esc((WZ.APPS.filter(function (x) { return x.id === a.app; })[0] || {}).name || "") : ""),
+        value: esc(a.title), note: esc(a.text || "") + (a.note ? '<span class="ask-src">' + esc(a.note) + "</span>" : ""), href: btn ? null : a.href, button: btn || null });
+      var w = $("askWx"); if (w) w.addEventListener("click", function () { set("wz_today_weather", "on"); renderToday(); renderSky(); doSearch(); });
+      var h = $("askHere"); if (h) h.addEventListener("click", function () { openHere(); });
+    });
+  }
+  function askChips(list) {
+    return '<div class="ask-chips">' + list.map(function (t) { return '<button type="button" class="ask-chip" data-ask="' + esc(t) + '">' + esc(t) + "</button>"; }).join("") + "</div>";
+  }
+  function bindChips(root) {
+    Array.prototype.forEach.call(root.querySelectorAll("[data-ask]"), function (b) {
+      b.addEventListener("mousedown", function (e) { e.preventDefault(); });
+      b.addEventListener("click", function () { var q = $("q"); q.value = b.getAttribute("data-ask"); doSearch(); });
+    });
+  }
+  /* Leeres Feld angetippt: kurz zeigen, was alles geht */
+  function showAskHints() {
+    if ($("q").value.trim() || !window.wzAsk) return;
+    $("home").hidden = true; $("results").hidden = false;
+    $("results").innerHTML = '<div class="res-group" id="hintGroup"><h3>Frag einfach</h3><div class="card today ask-hint">' + askChips(window.wzAsk.examples) +
+      '<p class="ask-more">Oder einen Namen eintippen, um Apps und Einträge zu finden – oder etwas Neues wie „Streaming 13,99 monatlich“, „3 Gläser Marmelade“ oder einen Gedanken. Alles bleibt auf deinem Gerät.</p></div></div>';
+    bindChips($("results"));
+  }
+  function hideAskHints() {
+    setTimeout(function () { if (!$("q").value.trim() && $("hintGroup")) { $("results").hidden = true; $("home").hidden = false; } }, 180);
+  }
+
   var searchTimer = null;
   function doSearch() {
     var raw = $("q").value.trim(), q = norm(raw);
     $("qx").hidden = !raw;
-    if (!q) { $("results").hidden = true; $("home").hidden = false; return; }
+    if (!q) { $("results").hidden = true; $("home").hidden = false; if (document.activeElement === $("q")) showAskHints(); return; }
     $("home").hidden = true; $("results").hidden = false;
+    var isQ = !!(window.wzAsk && window.wzAsk.looksLikeQuestion(raw));
     var apps = WZ.APPS.filter(function (a) { return norm(a.name + " " + a.sub + " " + a.kw).indexOf(q) !== -1; });
     var h = "";
     if (apps.length) {
@@ -1466,14 +1565,15 @@
         return row({ svg: icon(a.id), label: a.sub, value: hl(a.name, q), href: "./" + a.href });
       }).join("") + "</div></div>";
     }
-    var qe = raw.length >= 3 ? qeHtml(raw) : "", entryLike = /\s|\d/.test(raw);
-    $("results").innerHTML = (entryLike ? qe : "") + h + '<div id="resData"><p class="res-empty">Suche in deinen Einträgen …</p></div>' + (entryLike ? "" : qe);
+    var qe = raw.length >= 3 && !isQ ? qeHtml(raw) : "", entryLike = /\s|\d/.test(raw) && !isQ;
+    $("results").innerHTML = (isQ ? askHtml() : "") + (entryLike ? qe : "") + h + '<div id="resData"><p class="res-empty">Suche in deinen Einträgen …</p></div>' + (entryLike ? "" : qe);
     if (qe) qeBind(raw);
+    if (isQ) askRender(raw, ++askSeq);
     buildIndex().then(function (L) {
       if (norm($("q").value.trim()) !== q) return;
       var hits = L.filter(function (x) { return x.n.indexOf(q) !== -1; });
       var box = $("resData"); if (!box) return;
-      if (!hits.length) { box.innerHTML = apps.length || $("qeGroup") ? "" : '<p class="res-empty">Nichts gefunden.</p>'; return; }
+      if (!hits.length) { box.innerHTML = apps.length || $("qeGroup") || $("askGroup") ? "" : '<p class="res-empty">Nichts gefunden.</p>'; return; }
       var by = {};
       hits.forEach(function (x) { (by[x.app] = by[x.app] || []).push(x); });
       var out = "";
@@ -1523,6 +1623,8 @@
     var q = $("q");
     q.addEventListener("input", function () { clearTimeout(searchTimer); searchTimer = setTimeout(doSearch, 140); });
     q.addEventListener("focus", function () { buildIndex(); }, { once: true });
+    q.addEventListener("focus", showAskHints);
+    q.addEventListener("blur", hideAskHints);
     $("qx").addEventListener("click", function () { q.value = ""; doSearch(); q.focus(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && q.value) { q.value = ""; doSearch(); } });
     // beim Zurückkehren (z. B. aus einer App) Kennzahlen auffrischen
@@ -1531,6 +1633,35 @@
     toTop();
     setTimeout(toTop, 0);
     if (/[?&]anpassen=1/.test(location.search)) { try { history.replaceState(null, "", location.pathname); } catch (e) { } openHomeEdit(); }
+    initOnboarding();
+  }
+
+  /* ---------- Kurze Einführung beim ersten Start (einheitlich über wz-onboarding.js) ---------- */
+  function initOnboarding() {
+    if (typeof window.wzOnboarding !== "function") return;
+    function ic(p) { return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + p + "</svg>"; }
+    var again = /[?&]einfuehrung=1/.test(location.search);
+    var onb = window.wzOnboarding({
+      key: "wz_onboarded",
+      auto: !again,
+      slides: [
+        { iconHtml: '<img src="./icon-192.png" alt="" style="width:100%;height:100%;border-radius:inherit;display:block">', title: "Willkommen in der WahrZentrale",
+          text: "Über zwanzig eigene Apps unter einem Dach – für Himmel, Unterwegs, Alltag und Spiel. Alles läuft auf deinem Gerät: ohne Konto, ohne Werbung, ohne Tracking." },
+        { iconHtml: ic('<circle cx="10.5" cy="10.5" r="6.3"/><path d="M15.3 15.3l5.2 5.2"/><path d="M8.7 8.8a1.8 1.8 0 1 1 2.6 1.6c-.6.3-.8.7-.8 1.3"/><circle cx="10.5" cy="13.7" r=".45" fill="currentColor"/>'), title: "Ein Feld für alles",
+          html: "<p>Oben einfach lostippen:</p>" +
+            '<div class="wz-onb-row"><b>Suchen</b><span>– Apps und deine Einträge finden</span></div>' +
+            '<div class="wz-onb-row"><b>Fragen</b><span>– „Regnet es heute?“, „Wo habe ich geparkt?“</span></div>' +
+            '<div class="wz-onb-row"><b>Eintragen</b><span>– „Streaming 13,99 monatlich“ oder ein Gedanke</span></div>' +
+            "<p>Das Symbol rechts im Feld scannt Barcodes, QR-Codes und Belege.</p>" },
+        { iconHtml: ic('<rect x="4.5" y="5.5" width="15" height="14" rx="3"/><path d="M4.5 10h15M9 3.5v4M15 3.5v4"/>'), title: "Heute auf einen Blick",
+          text: "Die Karte „Heute“ sammelt, was gerade zählt: Wetter, Himmels-Tipp, nächste Zahlung, offene Gedanken und mehr. Über „Anpassen“ wählst du, was dort erscheint." },
+        { iconHtml: ic('<path d="M12 21.6s7-6.8 7-12.2a7 7 0 1 0-14 0C5 14.8 12 21.6 12 21.6Z"/><circle cx="12" cy="9.6" r="2.4"/>'), title: "Favoriten und „Hier merken“",
+          text: "Deine vier Lieblings-Apps liegen oben griffbereit. „Hier merken“ hält mit einem Tipp deinen Standort fest – etwa den Parkplatz. Zurück zur Startseite kommst du aus jeder App über den Pfeil oben links." },
+        { iconHtml: ic('<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/><circle cx="12" cy="15.4" r="1.2" fill="currentColor"/>'), title: "Deine Daten bleiben bei dir",
+          text: "Alles wird nur auf diesem Gerät gespeichert. Über das Zahnrad oben findest du die Einstellungen und unter „Sichern“ eine Sicherungsdatei für alle Apps." }
+      ]
+    });
+    if (again) { try { history.replaceState(null, "", location.pathname); } catch (e) { } onb.show(); }
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

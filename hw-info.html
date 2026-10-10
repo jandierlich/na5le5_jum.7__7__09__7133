@@ -18,16 +18,27 @@
 <link rel="icon" href="hw-icon-192.png" type="image/png">
 <link rel="stylesheet" href="hw-style.css">
 <link rel="stylesheet" href="./wz-unify.css">
+<style>/* Einführung als gut lesbare Liste statt seitlich wischbarer Karten */
+.hw-slides{flex-direction:column;overflow:visible;scroll-snap-type:none;gap:12px;}
+.hw-slide{min-width:0;}
+.hw-slide h2{font-size:17px;margin:0 0 8px;display:flex;align-items:center;gap:8px;}
+.hw-slide p{margin:0;}
+</style>
 </head>
 <body>
 <div class="hw-wrap">
   <div class="hw-header">
     <h1>So funktioniert HimmelsWahr</h1>
+    <p class="hw-sub">Alle Bereiche kurz erklärt.</p>
   </div>
   <div class="hw-slides">
     <div class="hw-slide">
       <h2><span data-hwi="sparkles" data-hwi-size="20"></span> Der ganze Himmel</h2>
       <p>Der Hintergrund der App zeigt den echten Himmel an deinem Standort: Morgenrot, Mittag, Goldene Stunde, Dämmerung oder Nacht – berechnet aus der Sonnenhöhe. Im Himmelsfenster oben stehen Sonne und Mond an ihrer tatsächlichen Position, darunter zeigt das Tagesband den ganzen Tag mit Sonnenauf- und -untergang und Regenwahrscheinlichkeit.</p>
+    </div>
+    <div class="hw-slide">
+      <h2><span data-hwi="sparkles" data-hwi-size="20"></span> Heute lohnt sich …</h2>
+      <p>Die Karte auf der Startseite fasst zusammen, was sich heute lohnt: die besten Stunden für den Sternenhimmel (mit sichtbaren Planeten), eine Regenbogen-Chance mit Blickrichtung sowie Frost, Bodenfrost, Tau oder Nebel in der kommenden Nacht. Jeder Hinweis erscheint nur, wenn er gerade zutrifft. Antippen zeigt, woraus er berechnet wurde. In den Einstellungen lassen sich einzelne Hinweise ausblenden. Der wichtigste Hinweis erscheint auch als „Himmels-Tipp“ auf der Startseite der WahrZentrale.</p>
     </div>
     <div class="hw-slide">
       <h2>Wetter und Regen</h2>
@@ -65,7 +76,7 @@
       <p>Für Wetterdaten wird dein Standort an Open-Meteo.com übermittelt – nur wenn du eine Wetterfunktion nutzt. Sonne, Mond, Planeten und Sterne werden auf deinem Gerät berechnet. Mehr dazu in der Datenschutzerklärung.</p>
     </div>
   </div>
-  <a class="hw-btn primary" href="hw-index.html">Los geht's</a>
+  <a class="hw-btn primary" href="hw-index.html">Zur Startseite</a>
   <div class="hw-footer">
     <a href="hw-info.html">Einführung</a>·<a href="./impressum.html">Impressum</a>·<a href="./datenschutz.html#hw">Datenschutz</a>·<a href="./lizenzen.html">Lizenzen</a>
   </div>

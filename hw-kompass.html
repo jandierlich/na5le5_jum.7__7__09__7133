@@ -30,7 +30,7 @@
     <h2>Jetzt am Himmel</h2>
     <svg class="hw-compass-rose" id="hw-rose" viewBox="-110 -110 220 220" role="img" aria-label="Kompassrose mit Richtung von Sonne, Mond und Planeten"></svg>
     <div id="hw-now-list" style="margin-top:10px;"></div>
-    <p style="font-size:12px;margin:8px 0 0;">Berechnet auf deinem Gerät aus Datum, Uhrzeit und Standort. Höhe 0° = Horizont.</p>
+    <p style="font-size:12px;margin:8px 0 0;">So liest du die Rose: Oben ist Norden. Je weiter außen ein Punkt, desto tiefer steht er – der Außenring ist der Horizont, die Mitte liegt genau über dir. Berechnet auf deinem Gerät aus Datum, Uhrzeit und Standort.</p>
   </div>
 
   <div class="hw-card">
@@ -74,9 +74,12 @@ hwRenderNav('hw-kompass.html');
 function hwRenderRose(objs){
   var svg = document.getElementById('hw-rose');
   var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-  var s = '<circle cx="0" cy="0" r="78" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/><circle cx="0" cy="0" r="46" fill="none" stroke="currentColor" stroke-opacity=".15" stroke-width="1"/>';
-  /* Hindernisse (Rechtecke), die Beschriftungen nicht überdecken dürfen */
-  var boxes = [];
+  /* Außenring = Horizont (0°), Innenring = 45° Höhe, Mitte = Zenit (genau über dir) */
+  var s = '<circle cx="0" cy="0" r="78" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/><circle cx="0" cy="0" r="39" fill="none" stroke="currentColor" stroke-opacity=".15" stroke-width="1" stroke-dasharray="2 3"/>' +
+    '<path d="M-3 0h6M0 -3v6" stroke="currentColor" stroke-opacity=".35" stroke-width="1"/>' +
+    '<g font-size="7.5" fill="currentColor" fill-opacity=".55" text-anchor="middle"><text x="0" y="10.5">Zenit</text><text x="0" y="-41.5">45°</text><text x="27" y="-74.5">Horizont</text></g>';
+  /* Hindernisse (Rechtecke), die Beschriftungen nicht überdecken dürfen – auch die Ringbeschriftung */
+  var boxes = [{ x0: -11, x1: 11, y0: 3, y1: 12 }, { x0: -8, x1: 8, y0: -48, y1: -39 }, { x0: 11, x1: 44, y0: -81, y1: -72 }];
   [['N',0],['O',90],['S',180],['W',270]].forEach(function(d){
     var a = hwDeg2rad(d[1]), tx = Math.sin(a) * 96, ty = -Math.cos(a) * 96;
     s += '<text x="' + tx.toFixed(1) + '" y="' + (ty + 5).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="currentColor">' + d[0] + '</text>';

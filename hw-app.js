@@ -610,7 +610,7 @@ function hwFetchWeather(lat, lon){
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
     current: 'temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,pressure_msl,surface_pressure,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,wind_direction_10m,is_day,uv_index,visibility,shortwave_radiation',
-    hourly: 'temperature_2m,weather_code,is_day,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,precipitation_probability,wind_speed_10m,pressure_msl,relative_humidity_2m',
+    hourly: 'temperature_2m,weather_code,is_day,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,precipitation_probability,wind_speed_10m,pressure_msl,relative_humidity_2m,apparent_temperature,dew_point_2m,precipitation,wind_gusts_10m,direct_radiation',
     daily: 'sunset,sunrise,weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max,sunshine_duration,daylight_duration,snowfall_sum',
     timezone: 'auto',
     forecast_days: '6'
@@ -1033,10 +1033,11 @@ function hwFormatTime(isoStr){
 }
 
 /* ---------- Reihenfolge der Startseiten-Abschnitte (vom Nutzer in den Einstellungen sortierbar) ---------- */
-var HW_SECTION_KEYS_DEFAULT = ['hero','nowcast','quicktiles','lage','hourly','forecast','details'];
+var HW_SECTION_KEYS_DEFAULT = ['hero','insights','nowcast','quicktiles','lage','hourly','forecast','details'];
 var HW_SECTION_META = {
   quicktiles: { icon: hwIcon('link', 16), label:'Schnellzugriff (Luft, Abendrot, Nachthimmel, Kompass, Sonnenbahn)' },
   hero:       { icon: hwIcon('sun', 16), label:'Himmel-Übersicht mit Tagesband' },
+  insights:   { icon: hwIcon('sparkles', 16), label:'Heute lohnt sich (Sterne, Regenbogen, Frost)' },
   nowcast:    { icon: hwIcon('cloudRain', 16), label:'Regen in den nächsten 2 Stunden' },
   lage:       { icon: hwIcon('pin', 16), label:'Aktuelle Lage' },
   hourly:     { icon: hwIcon('clock', 16), label:'Stündlicher Verlauf' },
@@ -1049,7 +1050,11 @@ function hwGetSectionOrder(){
     if(raw){
       var arr = JSON.parse(raw);
       if(Array.isArray(arr) && arr.length){
-        HW_SECTION_KEYS_DEFAULT.forEach(function(k){ if(arr.indexOf(k) === -1) arr.push(k); });
+        HW_SECTION_KEYS_DEFAULT.forEach(function(k, i){
+          if(arr.indexOf(k) !== -1) return;
+          var prev = i > 0 ? arr.indexOf(HW_SECTION_KEYS_DEFAULT[i - 1]) : -1;
+          if(prev === -1) arr.push(k); else arr.splice(prev + 1, 0, k);
+        });
         return arr;
       }
     }
@@ -1323,7 +1328,8 @@ function hwBuildDaySummary(data){
   if(!d || !d.time || !d.time.length) return '';
   var maxT = Math.round(d.temperature_2m_max[0]);
   var minT = Math.round(d.temperature_2m_min[0]);
-  var codeText = hwWeatherCodeText(d.weather_code[0]).toLowerCase();
+  /* Nur Adjektive am Satzanfang klein schreiben – Hauptwörter (Nebel, Regenschauer …) bleiben groß */
+  var codeText = hwWeatherCodeText(d.weather_code[0]).replace(/^(Klarer|Überwiegend|Teilweise|Bedeckt|Leichter|Leichte|Starker|Starke|Heftige|Gefrierender|Schweres)\b/, function(w){ return w.charAt(0).toLowerCase() + w.slice(1); });
   var offset = data.utc_offset_seconds;
   var now = Date.now();
   var rainHour = null;

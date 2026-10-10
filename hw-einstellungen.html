@@ -36,6 +36,12 @@
   </div>
 
   <div class="hw-card">
+    <h2>Heute lohnt sich …</h2>
+    <p style="font-size:12px;margin-top:-6px;">Welche Hinweise auf der Startseite erscheinen dürfen. Ein Hinweis zeigt sich nur, wenn er gerade zutrifft.</p>
+    <div class="hw-radio" id="hw-ins-settings"></div>
+  </div>
+
+  <div class="hw-card">
     <h2>Reihenfolge der Startseiten-Abschnitte</h2>
     <p style="font-size:12px;margin-top:-6px;">Mit den Pfeil-Buttons verschieben. Ein Abschnitt ohne aktuell verfügbaren Wert wird übersprungen, seine Position bleibt aber gemerkt.</p>
     <div id="hw-section-order-list"></div>
@@ -72,6 +78,16 @@ hwRenderNav('');
 function hwMsg(t){ var m = document.getElementById('hw-reset-msg'); m.textContent = t; m.style.display = 'block'; }
 document.addEventListener('DOMContentLoaded', function(){
   hwRenderSectionSettings();
+  (function(){
+    var items = [['sterne','Sternenhimmel heute Nacht'],['regenbogen','Regenbogen-Chance'],['frost','Frost, Bodenfrost, Tau und Nebel']];
+    var off = []; try{ off = JSON.parse(localStorage.getItem('hw-insights-off') || '[]') || []; }catch(e){}
+    var box = document.getElementById('hw-ins-settings');
+    box.innerHTML = items.map(function(it){ return '<label><input type="checkbox" data-ins="' + it[0] + '"' + (off.indexOf(it[0]) === -1 ? ' checked' : '') + '> ' + it[1] + '</label>'; }).join('');
+    box.addEventListener('change', function(){
+      var o = []; box.querySelectorAll('input[data-ins]').forEach(function(c){ if(!c.checked) o.push(c.getAttribute('data-ins')); });
+      try{ localStorage.setItem('hw-insights-off', JSON.stringify(o)); }catch(e){}
+    });
+  })();
   hwRenderTileSettings();
   var cur = hwGetThemePref();
   document.querySelectorAll('input[name=hw-theme]').forEach(function(r){
