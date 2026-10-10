@@ -679,7 +679,8 @@ button:active:not(:disabled), button.hw-pressed:not(:disabled), a[role="button"]
 }
 
 /* ---------- Heute lohnt sich ---------- */
-.hw-ins-card .hw-ins-sub{font-size:12.5px;margin:-6px 0 10px;}
+.hw-ins-card .hw-ins-sub{font-size:12.5px;margin:-6px 0 2px !important;line-height:1.45;}
+.hw-ins-row:first-child{padding-top:6px;}
 .hw-ins-row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 0;border:0;border-bottom:1px solid var(--border);background:none;color:var(--text);font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .hw-ins-row:last-child{border-bottom:none;}
 .hw-ins-row:active{opacity:.7;}

@@ -157,17 +157,26 @@ function hwShowGate(msg, showBtn){
   document.getElementById('hw-lage-btn').style.display = showBtn ? 'flex' : 'none';
 }
 
-function hwLoadLage(){
-  document.getElementById('hw-active-loc-label').innerHTML = hwActiveLocationLabel();
-  document.getElementById('hw-lage-btn').style.display = 'none';
-  document.getElementById('hw-lage-status').style.display = 'none';
-  document.getElementById('hw-lage-skeleton').style.display = 'block';
-  var pos0 = null;
-  hwGetActiveLocation().then(function(pos){
-    pos0 = pos;
-    return Promise.all([hwFetchWeather(pos.lat, pos.lon), hwFetchNowcast(pos.lat, pos.lon)]);
-  }).then(function(res){
-    var data = res[0], nc = res[1], c = data.current, lat = pos0.lat, lon = pos0.lon;
+/* Zuletzt geladene Wetterdaten (höchstens 60 Minuten, nur lokal): Beim Öffnen sofort anzeigen,
+   während im Hintergrund Standort und frische Daten geholt werden. */
+var HW_WX_CACHE = 'hw-weather-cache';
+function hwExpectedLoc(){
+  if(hwGetLocationMode() === 'manual'){ var m = hwGetManualLocation(); if(m) return m; }
+  return hwGetCachedLocation();
+}
+function hwWeatherCacheGet(){
+  try{
+    var c = JSON.parse(localStorage.getItem(HW_WX_CACHE) || 'null'), L = hwExpectedLoc();
+    if(!c || !c.data || !c.data.current || !L) return null;
+    if(Date.now() - c.ts > 3600000 || c.key !== hwLocKey(L.lat, L.lon)) return null;
+    return c;
+  }catch(e){ return null; }
+}
+function hwWeatherCacheSet(data, lat, lon){
+  try{ localStorage.setItem(HW_WX_CACHE, JSON.stringify({ ts: Date.now(), key: hwLocKey(lat, lon), lat: lat, lon: lon, data: data })); }catch(e){}
+}
+function hwRenderWeather(data, lat, lon, cachedTs){
+  var c = data.current;
 
     /* Himmelsfenster */
     document.getElementById('hw-hero-gate').style.display = 'none';
@@ -185,13 +194,11 @@ function hwLoadLage(){
     hwRenderInsights(data, lat, lon);
     hwRenderDaySummary('hw-day-summary', data);
 
-    /* Regen in den nächsten 2 Stunden */
-    document.getElementById('hw-nowcast-card').style.display = hwRenderNowcast('hw-nowcast', nc) ? 'block' : 'none';
-
     /* Aktuelle Lage */
-    var yDiff = hwUpdateYesterdayCompare(c.temperature_2m, hwLocKey(lat, lon));
+    var yDiff = cachedTs ? null : hwUpdateYesterdayCompare(c.temperature_2m, hwLocKey(lat, lon));
     var yText = hwYesterdayCompareText(yDiff);
-    if(yText){
+    if(cachedTs){ /* Vergleich bleibt bis zu den frischen Daten unverändert */ }
+    else if(yText){
       document.getElementById('hw-r-yesterday').textContent = yText;
       document.getElementById('hw-r-yesterday-row').style.display = 'flex';
     } else {
@@ -214,18 +221,41 @@ function hwLoadLage(){
     var uvColor = uv <= 2 ? 'var(--green-dot)' : (uv <= 5 ? 'var(--yellow-dot)' : 'var(--red-dot)');
     hwRenderRing('hw-r-uv-ring', uv, 11, uvColor, 'UV-Index', uv);
 
-    document.getElementById('hw-r-updated').innerHTML = hwIcon('refresh', 13) + ' Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE');
+    document.getElementById('hw-r-updated').innerHTML = hwIcon('refresh', 13) + (cachedTs ? ' Stand ' + new Date(cachedTs).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr – wird aktualisiert …' : ' Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE'));
     document.getElementById('hw-lage-card').style.display = 'block';
 
     hwRenderHourlyStrip('hw-hourly-scroll', data, 16);
     document.getElementById('hw-hourly-card').style.display = 'block';
-    hwCheckRainAlert(data, nc);
     hwRenderForecast('hw-forecast-list', data);
     document.getElementById('hw-forecast-card').style.display = 'block';
     hwRenderWeekTrend('hw-week-trend', data);
     hwRenderDetailTiles(data);
     document.getElementById('hw-details-toggle').style.display = 'flex';
+}
+function hwLoadLage(){
+  document.getElementById('hw-active-loc-label').innerHTML = hwActiveLocationLabel();
+  document.getElementById('hw-lage-btn').style.display = 'none';
+  document.getElementById('hw-lage-status').style.display = 'none';
+  var cached = hwWeatherCacheGet(), shown = false;
+  if(cached){ try{ hwRenderWeather(cached.data, cached.lat, cached.lon, cached.ts); shown = true; }catch(e){} }
+  if(!shown) document.getElementById('hw-lage-skeleton').style.display = 'block';
+  hwGetActiveLocation().then(function(pos){
+    /* Kurzfristvorhersage parallel laden – das Wetter wartet nicht darauf */
+    var ncP = hwFetchNowcast(pos.lat, pos.lon);
+    return hwFetchWeather(pos.lat, pos.lon).then(function(data){
+      hwWeatherCacheSet(data, pos.lat, pos.lon);
+      hwRenderWeather(data, pos.lat, pos.lon, null);
+      ncP.then(function(nc){
+        document.getElementById('hw-nowcast-card').style.display = hwRenderNowcast('hw-nowcast', nc) ? 'block' : 'none';
+        hwCheckRainAlert(data, nc);
+      });
+    });
   }).catch(function(err){
+    if(shown){
+      var cachedTs = cached.ts;
+      document.getElementById('hw-r-updated').innerHTML = hwIcon('refresh', 13) + ' Stand ' + new Date(cachedTs).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr – gerade keine Verbindung';
+      return;
+    }
     var offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
     hwShowGate(offline ? 'Keine Internetverbindung – für Wetterdaten wird eine Verbindung benötigt.' :
       'Standort oder Wetterdaten nicht verfügbar: ' + (err && err.message ? err.message : 'Zugriff verweigert') + '. Du kannst auch oben einen Ort suchen.', true);
