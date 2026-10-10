@@ -73,21 +73,71 @@ hwRenderNav('hw-kompass.html');
 /* ---------- Statische Übersicht (ohne Sensoren) ---------- */
 function hwRenderRose(objs){
   var svg = document.getElementById('hw-rose');
+  var dark = document.documentElement.getAttribute('data-theme') === 'dark';
   var s = '<circle cx="0" cy="0" r="78" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/><circle cx="0" cy="0" r="46" fill="none" stroke="currentColor" stroke-opacity=".15" stroke-width="1"/>';
+  /* Hindernisse (Rechtecke), die Beschriftungen nicht überdecken dürfen */
+  var boxes = [];
   [['N',0],['O',90],['S',180],['W',270]].forEach(function(d){
-    var a = hwDeg2rad(d[1]);
-    s += '<text x="' + (Math.sin(a) * 96).toFixed(1) + '" y="' + (-Math.cos(a) * 96 + 5).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="currentColor">' + d[0] + '</text>';
+    var a = hwDeg2rad(d[1]), tx = Math.sin(a) * 96, ty = -Math.cos(a) * 96;
+    s += '<text x="' + tx.toFixed(1) + '" y="' + (ty + 5).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="currentColor">' + d[0] + '</text>';
+    boxes.push({ x0: tx - 7, x1: tx + 7, y0: ty - 7, y1: ty + 7 });
   });
-  objs.forEach(function(o){
-    if(o.altitude < 0) return;
+  /* Reihenfolge: Sonne, Mond, dann Planeten nach Helligkeit der Position (höher zuerst) */
+  var rank = { sun: 0, moon: 1 };
+  var vis = objs.filter(function(o){ return o.altitude >= 0; }).map(function(o){
     var r = 78 * (1 - hwClamp01(o.altitude / 90));
-    var a = hwDeg2rad(o.azimuth), x = Math.sin(a) * r, y = -Math.cos(a) * r;
-    var col = o.type === 'sun' ? '#E0A020' : (o.type === 'moon' ? '#8C84B8' : '#4B3F72');
-    if(document.documentElement.getAttribute('data-theme') === 'dark') col = o.type === 'sun' ? '#F0C871' : (o.type === 'moon' ? '#D8D0FA' : '#B6ABE8');
-    s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (o.type === 'sun' || o.type === 'moon' ? 7 : 4.5) + '" fill="' + col + '"/>';
-    s += '<text x="' + (x + 9).toFixed(1) + '" y="' + (y + 4).toFixed(1) + '" font-size="11" font-weight="600" fill="currentColor">' + o.name + '</text>';
+    var a = hwDeg2rad(o.azimuth);
+    var big = o.type === 'sun' || o.type === 'moon';
+    return { o: o, x: Math.sin(a) * r, y: -Math.cos(a) * r, dr: big ? 7 : 4.5,
+      col: o.type === 'sun' ? (dark ? '#F0C871' : '#E0A020') : (o.type === 'moon' ? (dark ? '#D8D0FA' : '#8C84B8') : (dark ? '#B6ABE8' : '#4B3F72')) };
+  }).sort(function(a, b){
+    var ra = rank[a.o.type] != null ? rank[a.o.type] : 2, rb = rank[b.o.type] != null ? rank[b.o.type] : 2;
+    return ra - rb || b.o.altitude - a.o.altitude;
   });
-  svg.innerHTML = s;
+  vis.forEach(function(v){ boxes.push({ x0: v.x - v.dr - 1, x1: v.x + v.dr + 1, y0: v.y - v.dr - 1, y1: v.y + v.dr + 1 }); });
+  /* Punkte: größere zuerst, damit kleine darüber sichtbar bleiben; Rand trennt sich überlagernde Punkte */
+  vis.slice().sort(function(a, b){ return b.dr - a.dr; }).forEach(function(v){
+    s += '<circle cx="' + v.x.toFixed(1) + '" cy="' + v.y.toFixed(1) + '" r="' + v.dr + '" fill="' + v.col + '" stroke="var(--card-solid, #fff)" stroke-opacity=".9" stroke-width="1.2"/>';
+  });
+  function overlap(b){
+    var sum = 0;
+    for(var i = 0; i < boxes.length; i++){
+      var c = boxes[i];
+      var w = Math.min(b.x1, c.x1) - Math.max(b.x0, c.x0), h = Math.min(b.y1, c.y1) - Math.max(b.y0, c.y0);
+      if(w > 0 && h > 0) sum += w * h;
+    }
+    return sum;
+  }
+  var dirs = [[1,0],[-1,0],[0,-1],[0,1],[0.8,-0.8],[-0.8,-0.8],[0.8,0.8],[-0.8,0.8]];
+  var labels = '', lines = '';
+  vis.forEach(function(v){
+    var name = v.o.name, w = name.length * 6.3 + 2, h = 12;
+    var best = null;
+    for(var step = 0; step < 6 && !(best && best.cost === 0); step++){
+      var extra = step * 7;
+      for(var k = 0; k < dirs.length; k++){
+        var ux = dirs[k][0], uy = dirs[k][1];
+        var cx = v.x + ux * (v.dr + 3 + extra + w / 2), cy = v.y + uy * (v.dr + 2 + extra + h / 2);
+        var b = { x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2 };
+        if(b.x0 < -109 || b.x1 > 109 || b.y0 < -109 || b.y1 > 109) continue;
+        var cost = overlap(b) * 10 + step * 3 + k * 0.1;
+        if(overlap(b) === 0) cost = step * 3 + k * 0.1;
+        if(!best || cost < best.cost) best = { cx: cx, cy: cy, b: b, cost: cost, far: step > 0 };
+        if(overlap(b) === 0) break;
+      }
+      if(best && overlap(best.b) === 0) break;
+    }
+    if(!best){ best = { cx: v.x + v.dr + 3 + w / 2, cy: v.y, b: null, far: false }; }
+    if(best.b) boxes.push({ x0: best.b.x0 - 1.5, x1: best.b.x1 + 1.5, y0: best.b.y0 - 1, y1: best.b.y1 + 1 });
+    if(best.far){
+      /* dünne Hinweislinie vom Punkt zum nächstgelegenen Rand der Beschriftung */
+      var ex = Math.max(best.b.x0, Math.min(v.x, best.b.x1)), ey = Math.max(best.b.y0, Math.min(v.y, best.b.y1));
+      var dx = ex - v.x, dy = ey - v.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
+      lines += '<line x1="' + (v.x + dx / dl * v.dr).toFixed(1) + '" y1="' + (v.y + dy / dl * v.dr).toFixed(1) + '" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1) + '" stroke="currentColor" stroke-opacity=".45" stroke-width=".8"/>';
+    }
+    labels += '<text x="' + best.cx.toFixed(1) + '" y="' + (best.cy + 3.9).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">' + name + '</text>';
+  });
+  svg.innerHTML = s + lines + labels;
   svg.style.color = 'var(--text)';
 }
 function hwRenderNowList(){
