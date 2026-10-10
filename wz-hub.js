@@ -408,14 +408,25 @@
   var ICON_COLORS = [
     ["violett", "Violett", "#7C5CFF", "#5A2FBE", "#3B2585"],
     ["lila", "Lila", "#B06CF0", "#8A3FD1", "#5E2296"],
+    ["pflaume", "Pflaume", "#A86A9E", "#7E3F76", "#52244D"],
     ["indigo", "Indigo", "#6C7BFF", "#4453D6", "#2A3496"],
+    ["nachtblau", "Nachtblau", "#5A6FB8", "#2E3F86", "#1A2556"],
     ["blau", "Blau", "#4DA3FF", "#1F6FD6", "#15479A"],
+    ["himmel", "Himmel", "#7FC8FF", "#3A9BE8", "#1C66AE"],
     ["petrol", "Petrol", "#3CC7C9", "#1C8F9E", "#0F5C6B"],
+    ["tuerkis", "Türkis", "#4FD6C8", "#19A797", "#0D6E64"],
+    ["mint", "Mint", "#8FE3B4", "#4CBF85", "#2A8559"],
     ["gruen", "Grün", "#5CCB7A", "#2E9E55", "#1B6B3A"],
+    ["oliv", "Oliv", "#A8B85A", "#7A8A2E", "#4E5A18"],
+    ["senf", "Senf", "#E6C24A", "#B8901C", "#7A5D0C"],
     ["gold", "Gold", "#F2B93B", "#C98612", "#8F5A08"],
+    ["kupfer", "Kupfer", "#D9895A", "#A85A2C", "#6E3716"],
     ["orange", "Orange", "#FF9A5A", "#E0621F", "#A63F0E"],
+    ["koralle", "Koralle", "#FF8A7A", "#E85A4F", "#A8352E"],
     ["rot", "Rot", "#FF6B6B", "#D93B4A", "#9E1F33"],
+    ["bordeaux", "Bordeaux", "#C2506A", "#8E2440", "#5A1028"],
     ["rosa", "Rosa", "#FF7EB6", "#DB3F8B", "#A01F63"],
+    ["schiefer", "Schiefer", "#7D93A8", "#4F6478", "#2F3D4C"],
     ["graphit", "Graphit", "#8A8799", "#5B5870", "#34323F"]
   ];
   function colorDef(key) { for (var i = 0; i < ICON_COLORS.length; i++) if (ICON_COLORS[i][0] === key) return ICON_COLORS[i]; return null; }
@@ -428,13 +439,16 @@
     l.assign = l.assign && typeof l.assign === "object" ? l.assign : {};
     l.colors = l.colors && typeof l.colors === "object" ? l.colors : {};
     l.gcolors = l.gcolors && typeof l.gcolors === "object" ? l.gcolors : {};
+    // Gestaltung je Gruppe: { ic: Symbol, sub: Untertitel, font, size, style, tiles }
+    l.gdesign = l.gdesign && typeof l.gdesign === "object" ? l.gdesign : {};
     return l;
   }
   function saveLayout(l) { set("wz_home_layout", JSON.stringify(l)); }
   function allGroups() {
     var l = layout();
-    return WZ.AREAS.map(function (a) { return { id: a.id, title: l.names[a.id] || a.title, sub: l.names[a.id] ? "" : a.sub, builtin: true }; })
-      .concat(l.custom.map(function (g) { return { id: g.id, title: g.title, sub: "", builtin: false }; }));
+    function sub(id, def) { var d = l.gdesign[id]; return d && typeof d.sub === "string" ? d.sub : def; }
+    return WZ.AREAS.map(function (a) { return { id: a.id, title: l.names[a.id] || a.title, sub: sub(a.id, l.names[a.id] ? "" : a.sub), builtin: true }; })
+      .concat(l.custom.map(function (g) { return { id: g.id, title: g.title, sub: sub(g.id, ""), builtin: false }; }));
   }
   function groupOf(app, l) {
     l = l || layout();
@@ -482,8 +496,65 @@
       orn: '<g fill="none" stroke="currentColor" stroke-width="1.2"><path d="M10 90h16l8-30 10 60 10-80 10 70 8-40 8 20h18"/><path d="M120 40l6 16 16 6-16 6-6 16-6-16-16-6 16-6z"/><path d="M180 90l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/></g><g fill="currentColor"><circle cx="200" cy="30" r="2.4"/><circle cx="160" cy="130" r="1.8"/><circle cx="96" cy="20" r="1.4"/></g>'
     }
   };
-  var ART_DEFAULT = { em: '<circle cx="12" cy="12" r="7.5"/><path d="M12 8v8M8 12h8"/>', orn: '<g fill="currentColor"><circle cx="60" cy="40" r="2"/><circle cx="120" cy="80" r="2"/><circle cx="180" cy="40" r="2"/><circle cx="200" cy="120" r="2"/></g>' };
-  function areaArt(id) { return AREA_ART[id] || ART_DEFAULT; }
+  /* Selbst gezeichnete Gruppensymbole (Linienstil wie die Bereichs-Embleme, 24er-Raster) */
+  var GROUP_ICONS = [
+    ["ordner", "Ordner", '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 10.5h17"/>'],
+    ["himmel", "Himmel", AREA_ART.himmel.em],
+    ["unterwegs", "Unterwegs", AREA_ART.unterwegs.em],
+    ["alltag", "Alltag", AREA_ART.alltag.em],
+    ["spiel", "Spiel", AREA_ART.spiel.em],
+    ["stern", "Stern", '<path d="M12 3.6l2.3 5.4 5.8.5-4.4 3.8 1.3 5.7L12 16l-5 3 1.3-5.7-4.4-3.8 5.8-.5z"/>'],
+    ["sonne", "Sonne", '<circle cx="12" cy="12" r="4"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>'],
+    ["kompass", "Kompass", '<circle cx="12" cy="12" r="8.5"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/><circle cx="12" cy="12" r=".9" fill="currentColor" stroke="none"/>'],
+    ["lupe", "Entdecken", '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M7.8 9.4a3 3 0 0 1 2.4-2"/>'],
+    ["kamera", "Kamera", '<path d="M4 8.5a2 2 0 0 1 2-2h2l1.5-2h5l1.5 2h2a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.6" r="3.5"/>'],
+    ["erde", "Welt", '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.5 5.3 3.5 8.5s-1.1 6.1-3.5 8.5c-2.4-2.4-3.5-5.3-3.5-8.5s1.1-6.1 3.5-8.5z"/>'],
+    ["karte", "Karte", '<path d="M3.5 6.5l5.5-2 6 2 5.5-2v13l-5.5 2-6-2-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/>'],
+    ["berg", "Berge", '<path d="M2.5 19l6.5-10.5 4.2 6.3 2.5-3.4 5.8 7.6z"/><path d="M6.9 11.9l2.1 1.3 1.6-1.4"/>'],
+    ["baum", "Natur", '<path d="M12 3.5l5.5 7.6h-3.1l4 5.6H5.6l4-5.6H6.5z"/><path d="M12 16.7v3.8"/>'],
+    ["blatt", "Blatt", '<path d="M5 19c0-8 5-13.4 14.5-14-.3 9.5-5.8 14.4-14.5 14z"/><path d="M5 19l7.5-7.5"/>'],
+    ["welle", "Wasser", '<path d="M3 8.5c2.2-2 3.8-2 6 0s3.8 2 6 0 3.8-2 6 0"/><path d="M3 13.5c2.2-2 3.8-2 6 0s3.8 2 6 0 3.8-2 6 0"/><path d="M3 18.5c2.2-2 3.8-2 6 0s3.8 2 6 0 3.8-2 6 0"/>'],
+    ["pfote", "Tiere", '<path d="M12 12.6c2.6 0 5 2.6 5 5 0 1.6-1.4 2.4-2.8 2.1-.8-.2-1.4-.5-2.2-.5s-1.4.3-2.2.5C8.4 20 7 19.2 7 17.6c0-2.4 2.4-5 5-5z"/><ellipse cx="6" cy="10.4" rx="1.6" ry="2"/><ellipse cx="9.6" cy="6.6" rx="1.6" ry="2.1"/><ellipse cx="14.4" cy="6.6" rx="1.6" ry="2.1"/><ellipse cx="18" cy="10.4" rx="1.6" ry="2"/>'],
+    ["haus", "Zuhause", '<path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5v10h12v-10"/><path d="M10 19.5v-5h4v5"/>'],
+    ["herz", "Herz", '<path d="M12 19.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z"/>'],
+    ["musik", "Musik", '<path d="M9 17.5V6l10-2v11.5M9 9.5l10-2"/><circle cx="6.8" cy="17.5" r="2.2"/><circle cx="16.8" cy="15.5" r="2.2"/>'],
+    ["buch", "Lesen", '<path d="M12 6.5c-2-1.5-4.8-2-8-1.5v13c3.2-.5 6 0 8 1.5 2-1.5 4.8-2 8-1.5V5c-3.2-.5-6 0-8 1.5z"/><path d="M12 6.5v13"/>'],
+    ["idee", "Ideen", '<path d="M9.5 18.3h5M10.3 20.6h3.4"/><path d="M12 3.5a6 6 0 0 0-3.5 10.9c.4.3.5.8.5 1.3v.6h6v-.6c0-.5.1-1 .5-1.3A6 6 0 0 0 12 3.5z"/>'],
+    ["werkzeug", "Werkzeug", '<path d="M14.6 4.2a4.5 4.5 0 0 0-4.3 5.9L4.4 16a1.9 1.9 0 0 0 2.7 2.7l5.9-5.9a4.5 4.5 0 0 0 5.9-4.3l-2.6 2.6-2.4-.6-.6-2.4z"/>'],
+    ["lineal", "Messen", '<rect x="3" y="8.5" width="18" height="7" rx="1.5"/><path d="M6.5 8.5v3M10 8.5v2M13.5 8.5v3M17 8.5v2"/>'],
+    ["uhr", "Zeit", '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.4 2"/>'],
+    ["tasche", "Einkauf", '<path d="M5.5 8h13l-1 11.5h-11z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/>'],
+    ["auto", "Auto", '<path d="M4 15.5v-3.2l2-4.3h12l2 4.3v3.2z"/><path d="M4 12.3h16"/><circle cx="7.6" cy="15.8" r="1.7"/><circle cx="16.4" cy="15.8" r="1.7"/>'],
+    ["flugzeug", "Reisen", '<path d="M20.8 4.2L3.5 11l6.2 2.4 2.4 6.2z"/><path d="M9.7 13.4L20.8 4.2"/>'],
+    ["pokal", "Pokal", '<path d="M7.5 4.5h9v4a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6h-3a3 3 0 0 0 3 3.5M16.5 6h3a3 3 0 0 1-3 3.5"/><path d="M12 13v3.3M8.6 19.6h6.8M9.8 19.6l.5-3.3h3.4l.5 3.3"/>'],
+    ["wuerfel", "Würfel", '<rect x="4.5" y="4.5" width="15" height="15" rx="3.2"/><circle cx="8.7" cy="8.7" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.3" cy="8.7" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="8.7" cy="15.3" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.3" cy="15.3" r="1.1" fill="currentColor" stroke="none"/>']
+  ];
+  function groupIconDef(key) { for (var i = 0; i < GROUP_ICONS.length; i++) if (GROUP_ICONS[i][0] === key) return GROUP_ICONS[i]; return null; }
+  // Ornament (rechts oben in der Karte) aus dem gewählten Symbol: groß und zart gezeichnet
+  function ornFrom(em) {
+    return '<g transform="translate(118 8) scale(5.6)" fill="none" stroke="currentColor" stroke-width=".22" stroke-linecap="round" stroke-linejoin="round">' + em + '</g>' +
+      '<g fill="currentColor"><circle cx="40" cy="120" r="2"/><circle cx="76" cy="30" r="1.4"/><circle cx="96" cy="96" r="1.6"/></g>';
+  }
+  function groupDesign(id, l) { l = l || layout(); var d = l.gdesign[id]; return d && typeof d === "object" ? d : {}; }
+  function areaArt(id, l) {
+    var key = groupDesign(id, l).ic;
+    if (!key || !groupIconDef(key)) return AREA_ART[id] || { em: groupIconDef("ordner")[2], orn: ornFrom(groupIconDef("ordner")[2]) };
+    if (AREA_ART[key]) return AREA_ART[key];
+    var em = groupIconDef(key)[2];
+    return { em: em, orn: ornFrom(em) };
+  }
+  /* Beschriftung und Darstellung je Gruppe (nur Systemschriften) */
+  var G_FONTS = [["", "Standard"], ["rund", "Rund"], ["klassisch", "Klassisch"], ["technisch", "Technisch"]];
+  var G_SIZES = [["s", "Klein"], ["", "Normal"], ["l", "Groß"]];
+  var G_STYLES = [["", "Kräftig"], ["leicht", "Leicht"], ["versal", "Versalien"]];
+  var G_TILES = [["kompakt", "Kompakt", "4 je Reihe, nur Name"], ["", "Normal", "2 je Reihe mit Beschreibung"], ["gross", "Groß", "Große Symbole"], ["liste", "Liste", "Eine App je Zeile"]];
+  function inList(list, v) { return list.some(function (x) { return x[0] === v; }) ? v : ""; }
+  function designCls(id, l) {
+    var d = groupDesign(id, l), c = "";
+    var f = inList(G_FONTS, d.font), z = inList(G_SIZES, d.size), y = inList(G_STYLES, d.style), t = inList(G_TILES, d.tiles);
+    if (f) c += " gf-" + f; if (z) c += " gh-" + z; if (y) c += " gs-" + y; if (t) c += " tl-" + t;
+    return c;
+  }
 
   /* ---------- Weitermachen und Favoriten ---------- */
   var SHORT = { zh: "Sterne", kv: "Korvan&shy;thiel", hk: "HerzKaro<wbr>Drei" };
@@ -926,8 +997,8 @@
     visible.forEach(function (a, ai) {
       var apps = orderedApps(a.id);
       if (!editMode) {
-        var art = areaArt(a.id);
-        h += '<section class="sec area ar-' + esc(a.id) + (closed[a.id] ? " closed" : "") + '" id="' + esc(a.id) + '" aria-labelledby="h-' + esc(a.id) + '"' + groupStyle(a.id, l) + '><div class="area-card">' +
+        var art = areaArt(a.id, l);
+        h += '<section class="sec area ar-' + esc(a.id) + designCls(a.id, l) + (closed[a.id] ? " closed" : "") + '" id="' + esc(a.id) + '" aria-labelledby="h-' + esc(a.id) + '"' + groupStyle(a.id, l) + '><div class="area-card">' +
           '<svg class="area-orn" viewBox="0 0 230 150" aria-hidden="true">' + art.orn + "</svg>" +
           '<div class="area-h"><span class="area-em"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + art.em + "</svg></span>" +
           '<span class="area-t"><h2 id="h-' + esc(a.id) + '">' + esc(a.title) + "</h2>" + (a.sub ? "<p>" + esc(a.sub) + "</p>" : "") + "</span>" +
@@ -936,14 +1007,14 @@
           '<div class="area-mini">' + apps.map(function (x) { return '<a href="./' + x.href + '" data-app="' + x.id + '" aria-label="' + esc(x.name) + '" title="' + esc(x.name) + '">' + appIcon(x, l) + "</a>"; }).join("") + "</div>" +
           '<div class="grid apps" id="g-' + esc(a.id) + '">' + apps.map(function (x) {
             return '<a class="tile" href="./' + x.href + '" data-app="' + x.id + '">' + appIcon(x, l) +
-              '<span class="t-txt"><span class="t-name">' + esc(x.name) + '</span><span class="t-sub">' + esc(x.sub) + '</span><span class="t-stat" data-count data-stat="' + x.id + '">' + esc(statFor(x.id)) + "</span></span></a>";
+              '<span class="t-txt"><span class="t-name">' + nameHtml(x.name) + '</span><span class="t-sub">' + esc(x.sub) + '</span><span class="t-stat" data-count data-stat="' + x.id + '">' + esc(statFor(x.id)) + "</span></span></a>";
           }).join("") + "</div></div></section>";
         return;
       }
       h += '<section class="sec' + (editMode ? " editing" : "") + '" id="' + esc(a.id) + '" aria-labelledby="h-' + esc(a.id) + '"><div class="sec-h"><h2 id="h-' + esc(a.id) + '">' + esc(a.title) + "</h2>" +
         (editMode ? '<span class="mv-row">' +
           '<button type="button" class="mv t-color g-color" data-gcolor="' + esc(a.id) + '" aria-label="Ordnerfarbe für ' + esc(a.title) + '" title="Ordnerfarbe"' + groupStyle(a.id, l) + "><span></span></button>" +
-          smallBtn(PEN, "Gruppe „" + esc(a.title) + "“ umbenennen", 'data-rename="' + esc(a.id) + '"') +
+          smallBtn(PEN, "Gruppe „" + esc(a.title) + "“ gestalten: Name, Symbol, Schrift, Darstellung", 'data-rename="' + esc(a.id) + '"') +
           (!a.builtin && !apps.length ? smallBtn(BIN, "Gruppe „" + esc(a.title) + "“ löschen", 'data-delgroup="' + esc(a.id) + '"') : "") +
           arrowBtn("up", esc(a.title) + " nach oben", 'data-area="' + esc(a.id) + '" data-dir="-1"', ai === 0) +
           arrowBtn("down", esc(a.title) + " nach unten", 'data-area="' + esc(a.id) + '" data-dir="1"', ai === visible.length - 1) + "</span>"
@@ -989,7 +1060,7 @@
         b.addEventListener("click", function () { pickGroupColor(b.getAttribute("data-gcolor")); });
       });
       Array.prototype.forEach.call($("areas").querySelectorAll("[data-rename]"), function (b) {
-        b.addEventListener("click", function () { renameGroup(b.getAttribute("data-rename")); });
+        b.addEventListener("click", function () { designGroup(b.getAttribute("data-rename")); });
       });
       Array.prototype.forEach.call($("areas").querySelectorAll("[data-delgroup]"), function (b) {
         b.addEventListener("click", function () { deleteGroup(b.getAttribute("data-delgroup")); });
@@ -1033,14 +1104,6 @@
     toast("„" + app.name + "“ liegt jetzt in „" + groupTitle(groupId) + "“");
   }
   function groupTitle(id) { var t = ""; allGroups().forEach(function (g) { if (g.id === id) t = g.title; }); return t; }
-  function renameGroup(id) {
-    askText("Gruppe umbenennen", groupTitle(id), function (v) {
-      var l = layout(), builtin = WZ.AREAS.filter(function (a) { return a.id === id; })[0];
-      if (builtin) { if (!v || v === builtin.title) delete l.names[id]; else l.names[id] = v; }
-      else { if (!v) return; l.custom.forEach(function (g) { if (g.id === id) g.title = v; }); }
-      saveLayout(l); renderAreas(id);
-    });
-  }
   function addGroup() {
     askText("Neue Gruppe", "", function (v) {
       if (!v) return;
@@ -1048,6 +1111,8 @@
       l.custom.push({ id: id, title: v }); saveLayout(l);
       var o = orderPrefs(); o.areas = orderedAreas().map(function (a) { return a.id; }); saveOrder(o);
       renderAreas(id);
+      // gleich weiter zum Gestalten (Symbol, Schrift, Darstellung)
+      setTimeout(function () { designGroup(id); }, 260);
     }, "z. B. Favoriten");
   }
   function deleteGroup(id) {
@@ -1055,7 +1120,78 @@
     l.custom = l.custom.filter(function (g) { return g.id !== id; });
     Object.keys(l.assign).forEach(function (k) { if (l.assign[k] === id) delete l.assign[k]; });
     delete l.gcolors[id];
+    delete l.gdesign[id];
     saveLayout(l); renderAreas();
+  }
+
+  /* ---------- Gruppe gestalten: Name, Untertitel, Symbol, Farbe, Schrift, Darstellung ----------
+     Vorschau oben zeigt jede Änderung sofort; gespeichert wird mit „Übernehmen“. */
+  function designGroup(id) {
+    var l = layout(), builtin = WZ.AREAS.filter(function (a) { return a.id === id; })[0];
+    var d = JSON.parse(JSON.stringify(groupDesign(id, l)));
+    var name = groupTitle(id), gc = l.gcolors[id] || "";
+    var defSub = builtin ? builtin.sub : "";
+    var sub = typeof d.sub === "string" ? d.sub : (builtin && !l.names[id] ? builtin.sub : "");
+    function seg(list, key, attr) {
+      return '<div class="hs-seg" role="group">' + list.map(function (x) { return '<button type="button" ' + attr + '="' + x[0] + '" aria-pressed="' + (inList(list, d[key]) === x[0]) + '"' + (attr === "data-gf" ? ' class="gf-btn gf-' + (x[0] || "std") + '"' : "") + ">" + x[1] + "</button>"; }).join("") + "</div>";
+    }
+    var curIc = d.ic && groupIconDef(d.ic) ? d.ic : "";
+    var icH = '<div class="hs-ic">' + '<button type="button" data-gi="" class="' + (!curIc ? "on" : "") + '" aria-label="Standard-Symbol"><span class="sw-std">Std</span></button>' +
+      GROUP_ICONS.map(function (g) { return '<button type="button" data-gi="' + g[0] + '" class="' + (curIc === g[0] ? "on" : "") + '" aria-label="' + esc(g[1]) + '" title="' + esc(g[1]) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + g[2] + "</svg></button>"; }).join("") + "</div>";
+    var tilesH = '<div class="hs-tl">' + G_TILES.map(function (t) {
+      return '<button type="button" data-gt="' + t[0] + '" aria-pressed="' + (inList(G_TILES, d.tiles) === t[0]) + '"><span class="tl-pv tl-pv-' + (t[0] || "normal") + '" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>' + t[1] + "</b><em>" + t[2] + "</em></button>";
+    }).join("") + "</div>";
+    var body =
+      '<div class="gd-prev" id="gdPrev"></div>' +
+      '<h3>Name</h3><input class="hs-in" id="gdName" type="text" maxlength="30" autocomplete="off" value="' + esc(name) + '">' +
+      '<h3>Untertitel</h3><input class="hs-in" id="gdSub" type="text" maxlength="44" autocomplete="off" value="' + esc(sub) + '" placeholder="optional, z. B. Draußen unterwegs">' +
+      '<h3>Symbol</h3>' + icH +
+      '<h3>Ordnerfarbe</h3>' + swatches(gc, true, "data-gd") +
+      '<h3>Schrift der Überschrift</h3>' + seg(G_FONTS, "font", "data-gf") +
+      '<h3>Größe der Überschrift</h3>' + seg(G_SIZES, "size", "data-gz") +
+      '<h3>Stil der Überschrift</h3>' + seg(G_STYLES, "style", "data-gy") +
+      '<h3>Darstellung der Apps</h3>' + tilesH +
+      '<button type="button" class="hs-ok" id="gdOk" style="margin-top:20px">Übernehmen</button>' +
+      '<button type="button" class="hs-reset" id="gdReset">Gestaltung auf Standard</button>';
+    openSheet("Gruppe gestalten", body, function (w, close) {
+      var inName = w.querySelector("#gdName"), inSub = w.querySelector("#gdSub");
+      function preview() {
+        var tmp = layout(); tmp.gdesign[id] = d; if (gc) tmp.gcolors[id] = gc; else delete tmp.gcolors[id];
+        var art = areaArt(id, tmp);
+        w.querySelector("#gdPrev").innerHTML = '<div class="sec area ar-' + esc(id) + designCls(id, tmp) + '"' + groupStyle(id, tmp) + '><div class="area-h"><span class="area-em"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + art.em + "</svg></span>" +
+          '<span class="area-t"><h2>' + esc(inName.value.trim() || name) + "</h2>" + (inSub.value.trim() ? "<p>" + esc(inSub.value.trim()) + "</p>" : "") + "</span></div></div>";
+      }
+      function pick(attr, key, list) {
+        Array.prototype.forEach.call(w.querySelectorAll("[" + attr + "]"), function (b) {
+          b.addEventListener("click", function () {
+            var v = b.getAttribute(attr);
+            if (v) d[key] = v; else delete d[key];
+            Array.prototype.forEach.call(w.querySelectorAll("[" + attr + "]"), function (x) { if (list) x.setAttribute("aria-pressed", String(x === b)); else x.classList.toggle("on", x === b); });
+            preview();
+          });
+        });
+      }
+      pick("data-gi", "ic"); pick("data-gf", "font", 1); pick("data-gz", "size", 1); pick("data-gy", "style", 1); pick("data-gt", "tiles", 1);
+      Array.prototype.forEach.call(w.querySelectorAll("[data-gd]"), function (b) {
+        b.addEventListener("click", function () { gc = b.getAttribute("data-gd"); Array.prototype.forEach.call(w.querySelectorAll("[data-gd]"), function (x) { x.classList.toggle("on", x === b); }); preview(); });
+      });
+      inName.addEventListener("input", preview); inSub.addEventListener("input", preview);
+      w.querySelector("#gdOk").addEventListener("click", function () {
+        var l2 = layout(), v = inName.value.trim().slice(0, 30), sv = inSub.value.trim().slice(0, 44);
+        if (builtin) { if (!v || v === builtin.title) delete l2.names[id]; else l2.names[id] = v; }
+        else if (v) l2.custom.forEach(function (g) { if (g.id === id) g.title = v; });
+        // Untertitel nur speichern, wenn er vom Standard abweicht
+        var stdSub = builtin && !l2.names[id] ? defSub : "";
+        if (sv === stdSub) delete d.sub; else d.sub = sv;
+        if (Object.keys(d).length) l2.gdesign[id] = d; else delete l2.gdesign[id];
+        if (gc) l2.gcolors[id] = gc; else delete l2.gcolors[id];
+        saveLayout(l2); close(); renderAreas(id); toast("Gruppe „" + groupTitle(id) + "“ gestaltet");
+      });
+      w.querySelector("#gdReset").addEventListener("click", function () {
+        var l2 = layout(); delete l2.gdesign[id]; delete l2.gcolors[id]; saveLayout(l2); close(); renderAreas(id); toast("Gestaltung zurückgesetzt");
+      });
+      preview();
+    });
   }
 
   /* ---------- Kleine Dialoge (Bottom-Sheet) ---------- */
